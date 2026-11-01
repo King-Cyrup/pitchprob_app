@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PitchProb &mdash; Match probability insights</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,650;14..32,750&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b13;
+      --surface: #0f1726;
+      --surface-raised: #152034;
+      --border: #1c2a40;
+      --border-soft: #233350;
+      --ink: #e4e9f1;
+      --ink-soft: #c2cbdb;
+      --muted: #7185a3;
+      --faint: #435570;
+      --accent: #52d843;
+      --accent-dim: #2e7825;
+      --gold: #c59a3d;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    body {
+      min-height: 100vh;
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: .875rem; line-height: 1.55;
+      color: var(--ink); background: var(--bg);
+      font-synthesis: none; text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    main { width: min(1024px, calc(100% - 2.5rem)); margin: 0 auto; padding: 3rem 0 4rem; }
+
+    /* Header */
+    header { margin-bottom: 2.5rem; }
+    .mark {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .68rem; font-weight: 650; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent-dim);
+      margin-bottom: .6rem;
+    }
+    .mark-dot {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+    }
+    h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 750; letter-spacing: -.04em;
+         color: var(--ink); margin-bottom: .55rem; line-height: 1.15; }
+    .tagline {
+      max-width: 520px; color: var(--muted); font-size: .88rem; line-height: 1.7;
+    }
+
+    /* Sections */
+    section + section { margin-top: 3rem; }
+    .sec-hd {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 1rem; margin-bottom: 1rem; padding-bottom: .6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 { margin: 0; font-size: .95rem; font-weight: 650; letter-spacing: -.015em; color: var(--ink-soft); }
+    .sec-hint { color: var(--muted); font-size: .78rem; }
+
+    /* Day tabs */
+    .day-tabs {
+      display: grid; grid-template-columns: repeat(7, minmax(68px, 1fr));
+      gap: 6px; margin-bottom: 1.25rem;
+    }
+    .day-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; min-height: 60px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--muted); cursor: pointer; font: inherit; font-size: .82rem;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .day-btn:hover { border-color: var(--faint); color: var(--ink-soft); }
+    .day-btn[aria-pressed="true"] {
+      border-color: var(--border-soft); background: var(--surface-raised);
+      color: var(--ink); font-weight: 600;
+    }
+    .day-btn:focus-visible { outline: 2px solid var(--accent-dim); outline-offset: 2px; }
+    .day-lbl { font-size: .8rem; font-weight: 650; }
+    .day-dt { font-size: .7rem; opacity: .65; }
+
+    /* League filter */
+    .flt-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; }
+    .flt-row label { color: var(--muted); font-size: .76rem; font-weight: 600; }
+    .lg-slct {
+      min-width: 180px; padding: .55rem 2rem .55rem .65rem;
+      border: 1px solid var(--border); outline: none;
+      background: var(--surface); color: var(--ink); font: inherit; font-size: .82rem;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237185a3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right .6rem center;
+    }
+    .lg-slct:focus-visible { outline: 2px solid var(--accent-dim); outline-offset: 2px; }
+
+    /* Day panels & league groups */
+    .day-pnl[hidden], .lg-grp[hidden] { display: none; }
+    .lg-grp + .lg-grp { margin-top: 1.25rem; }
+
+    .pnl {
+      overflow: hidden; border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .lg-title {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: .7rem 1rem;
+      background: var(--surface-raised); border-bottom: 1px solid var(--border);
+      font-size: .82rem; font-weight: 650; color: var(--ink-soft);
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .lg-cnt {
+      color: var(--muted); font-size: .72rem; font-weight: 500;
+      letter-spacing: 0; text-transform: none;
+    }
+
+    /* Tables */
+    .wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    th, td { padding: .6rem .85rem; border-bottom: 1px solid var(--border); text-align: left; font-size: .82rem; }
+    th {
+      background: transparent; color: var(--muted); font-size: .68rem;
+      font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
+      padding-top: .85rem; padding-bottom: .55rem;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: var(--surface-raised); }
+
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .prob { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
+    .muted { color: var(--muted); }
+
+    /* Lock badge */
+    .lock-dot {
+      display: inline-block; width: 6px; height: 6px;
+      background: var(--faint); border-radius: 50%;
+      margin-left: .35rem; vertical-align: middle;
+      cursor: default;
+    }
+    .lock-dot[title] { /* tooltip via title attr */ }
+
+    /* Empty state */
+    .empty {
+      padding: 2rem 1.25rem; border: 1px dashed var(--border);
+      color: var(--muted); text-align: center;
+      font-size: .84rem; margin-top: .5rem;
+    }
+    .empty code {
+      font-family: inherit; font-size: .82rem;
+      color: var(--accent-dim); background: var(--surface-raised);
+      padding: .15rem .4rem;
+    }
+
+    /* Stat tiles */
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px; margin-bottom: 1.5rem;
+    }
+    .stat-tile {
+      padding: .9rem 1rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .stat-tile:first-child {
+      border-top: 2px solid var(--accent-dim);
+    }
+    .stat-val {
+      font-size: 1.35rem; font-weight: 750; color: var(--ink);
+      line-height: 1.15; font-variant-numeric: tabular-nums;
+    }
+    .stat-lbl {
+      font-size: .72rem; color: var(--muted); margin-top: .25rem;
+    }
+
+    /* Disclaimer */
+    .discl {
+      margin-top: 2.5rem; padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      color: var(--faint); font-size: .74rem; line-height: 1.7;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      main { width: min(100% - 1.5rem, 1024px); padding: 2rem 0 3rem; }
+      section + section { margin-top: 2.5rem; }
+      .day-tabs { grid-template-columns: repeat(7, minmax(56px, 1fr)); gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+      .day-btn { min-width: 56px; min-height: 52px; }
+      .flt-row { justify-content: space-between; }
+      .lg-slct { min-width: 0; flex: 1; max-width: 220px; }
+      th, td { padding: .55rem .65rem; font-size: .78rem; }
+      .sec-hd { align-items: flex-start; flex-direction: column; gap: .25rem; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .stat-val { font-size: 1.15rem; }
+    }
+    @media (max-width: 400px) { .stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- Header -->
+    <header>
+      <div class="mark"><span class="mark-dot" aria-hidden="true"></span>Match probability insights</div>
+      <h1>PitchProb</h1>
+      <p class="tagline">
+        A statistical model trained on years of match results.
+        See the probabilities for every fixture, and how the forecasts hold up over time.
+      </p>
+    </header>
+
+    <!-- Upcoming matches -->
+    <section aria-labelledby="upcoming-heading">
+      <div class="sec-hd">
+        <h2 id="upcoming-heading">Upcoming fixtures</h2>
+        <span class="sec-hint">Times in UTC</span>
+      </div>
+
+      <nav class="day-tabs" role="tablist" aria-label="Select match day">
+        {% for day in fixture_days %}
+        <button class="day-btn" type="button" role="tab"
+                id="tab-{{ day.date }}" aria-controls="panel-{{ day.date }}"
+                aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                data-day="{{ day.date }}">
+          <span class="day-lbl">{{ day.label }}</span>
+          <span class="day-dt">{{ day.month }} {{ day.day }}</span>
+        </button>
+        {% endfor %}
+      </nav>
+
+      <div class="flt-row">
+        <label for="league-filter">Show</label>
+        <select class="lg-slct" id="league-filter" aria-label="Filter by league">
+          <option value="all">All leagues</option>
+        </select>
+      </div>
+
+      <div id="match-days">
+        {% for day in fixture_days %}
+        <div class="day-pnl" role="tabpanel"
+             id="panel-{{ day.date }}" aria-labelledby="tab-{{ day.date }}"
+             data-day="{{ day.date }}" {% if not loop.first %}hidden{% endif %}>
+          {% for league in day.leagues %}
+          <section class="lg-grp" data-league="{{ league.code }}" data-league-name="{{ league.name }}">
+            <div class="pnl">
+              <h3 class="lg-title">
+                {{ league.name }}
+                <span class="lg-cnt">{{ league.fixtures|length }} match{{ '' if league.fixtures|length == 1 else 'es' }}</span>
+              </h3>
+              <div class="wrap">
+                <table>
+                  <thead>
+                    <tr><th>Kickoff</th><th>Match</th>
+                        <th class="num">Home</th><th class="num">Draw</th><th class="num">Away</th>
+                        <th class="num">Over&nbsp;2.5</th><th class="num">BTTS</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for f in league.fixtures %}
+                    <tr>
+                      <td>
+                        {{ f.kickoff_utc[11:16] }}
+                        {% if f.locked %}<span class="lock-dot" title="Forecast locked — frozen within 60 min of kickoff"></span>{% endif %}
+                      </td>
+                      <td>{{ f.home or f.home_fd }} <span class="muted">v</span> {{ f.away or f.away_fd }}</td>
+                      {% if f.p_home is not none %}
+                        <td class="num prob">{{ "%.0f"|format(f.p_home * 100) }}%</td>
+                        <td class="num">{{ "%.0f"|format(f.p_draw * 100) }}%</td>
+                        <td class="num">{{ "%.0f"|format(f.p_away * 100) }}%</td>
+                        <td class="num">{{ "%.0f"|format(f.p_over25 * 100) }}%</td>
+                        <td class="num">{{ "%.0f"|format(f.p_btts * 100) }}%</td>
+                      {% else %}
+                        <td colspan="5" class="muted">{{ f.note }}</td>
+                      {% endif %}
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          {% endfor %}
+          {% if not day.leagues %}
+          <p class="empty">No fixtures scheduled for this day.</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Track record -->
+    <section aria-labelledby="record-heading">
+      <div class="sec-hd">
+        <h2 id="record-heading">Track record</h2>
+        <span class="sec-hint">Recent graded forecasts</span>
+      </div>
+
+      {% if ledger.summary.n %}
+        <!-- Stat tiles -->
+        <div class="stats">
+          <div class="stat-tile">
+            <div class="stat-val">{{ ledger.summary.n }}</div>
+            <div class="stat-lbl">graded matches</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val">{{ "%.3f"|format(ledger.summary.ll) }}</div>
+            <div class="stat-lbl">avg log loss <span class="muted">(model)</span></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val">{{ "%.3f"|format(ledger.summary.base_ll) }}</div>
+            <div class="stat-lbl">avg log loss <span class="muted">(baseline)</span></div>
+          </div>
+          {% if ledger.summary.pick_rate is not none %}
+          <div class="stat-tile">
+            <div class="stat-val">{{ "%.0f"|format(ledger.summary.pick_rate * 100) }}%</div>
+            <div class="stat-lbl">highest-prob pick correct</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Recent matches -->
+        <div class="pnl">
+          <div class="wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Match</th><th>Result</th>
+                         <th class="num">Home</th><th class="num">Draw</th><th class="num">Away</th></tr>
+              </thead>
+              <tbody>
+                {% for g in ledger.recent %}
+                <tr>
+                  <td>{{ g.kickoff_utc[:10] }}</td>
+                  <td>{{ g.home }} <span class="muted">v</span> {{ g.away }}</td>
+                  <td>{{ g.home_goals }}-{{ g.away_goals }}</td>
+                  <td class="num prob">{{ "%.0f"|format(g.p_home * 100) }}%</td>
+                  <td class="num">{{ "%.0f"|format(g.p_draw * 100) }}%</td>
+                  <td class="num">{{ "%.0f"|format(g.p_away * 100) }}%</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <p class="empty">No matches graded yet. Results appear here after matches finish and <code>python cli.py daily</code> runs.</p>
+      {% endif %}
+    </section>
+
+    <p class="discl">Probabilities are estimates from a statistical model, not betting advice. 18+ only. Forecasts inside 60 minutes of kickoff are locked and never overwritten.</p>
+  </main>
+
+  <script>
+    const dayTabs = Array.from(document.querySelectorAll(".day-btn"));
+    const leagueFilter = document.getElementById("league-filter");
+    const dayPanels = Array.from(document.querySelectorAll(".day-pnl"));
+
+    function applyLeagueFilter(panel) {
+      const selected = leagueFilter.value;
+      for (const grp of panel.querySelectorAll(".lg-grp")) {
+        grp.hidden = selected !== "all" && grp.dataset.league !== selected;
+      }
+    }
+
+    function selectDay(day) {
+      const activeTab = dayTabs.find(t => t.dataset.day === day);
+      const activePanel = dayPanels.find(p => p.dataset.day === day);
+      if (!activeTab || !activePanel) return;
+
+      for (const t of dayTabs) {
+        const sel = t === activeTab;
+        t.setAttribute("aria-pressed", String(sel));
+        t.setAttribute("aria-selected", String(sel));
+      }
+      for (const p of dayPanels) p.hidden = p !== activePanel;
+
+      const leagues = Array.from(activePanel.querySelectorAll(".lg-grp"));
+      const prev = leagueFilter.value;
+      leagueFilter.replaceChildren(new Option("All leagues", "all"));
+      for (const grp of leagues) {
+        leagueFilter.add(new Option(grp.dataset.leagueName, grp.dataset.league));
+      }
+      leagueFilter.value = leagues.some(g => g.dataset.league === prev) ? prev : "all";
+      applyLeagueFilter(activePanel);
+    }
+
+    for (const t of dayTabs) t.addEventListener("click", () => selectDay(t.dataset.day));
+    leagueFilter.addEventListener("change", () => {
+      const active = dayPanels.find(p => !p.hidden);
+      if (active) applyLeagueFilter(active);
+    });
+    selectDay(dayTabs[0]?.dataset.day);
+  </script>
+</body>
+</html>
