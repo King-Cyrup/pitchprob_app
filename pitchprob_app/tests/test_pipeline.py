@@ -316,8 +316,11 @@ def test_streamlit_dashboard_smoke():
     result = AppTest.from_file(str(script), default_timeout=30).run()
 
     assert not result.exception
-    assert any(element.value == "PitchProb" for element in result.title)
-    assert any(element.value == "Track record" for element in result.subheader)
+    page_html = result.html[0].proto.body
+    assert "<title>PitchProb" in page_html
+    assert "Track record" in page_html
+    assert "Champions League" in page_html
+    assert not result.radio and not result.multiselect
 
 
 def test_check_access_and_status(env, monkeypatch, capsys):

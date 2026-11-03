@@ -35,11 +35,14 @@ Open http://127.0.0.1:8080 in a browser.
 
 ## Deploy on Streamlit Community Cloud
 
-The Streamlit entry point is `pitchprob_app/streamlit_app.py`. In Streamlit Community
-Cloud, create an app from this GitHub repository, select the `pitch` branch, and set
-the main file path to `pitchprob_app/streamlit_app.py`. The dependency file is beside
-the app entry point. The dashboard reads the committed database and does not need API
-credentials at runtime.
+The Streamlit entry point is `pitchprob_app/streamlit_app.py`. It renders the same
+`templates/index.html` page as the local FastAPI app, so shared layout, styles, and
+fixture interactions stay in sync. Edit that template to style both versions.
+
+In Streamlit Community Cloud, create an app from this GitHub repository, select the
+`pitch` branch, and set the main file path to `pitchprob_app/streamlit_app.py`. The
+dependency file is beside the app entry point. The dashboard reads the committed
+database and does not need API credentials at runtime.
 
 ### Daily data and model refresh
 
