@@ -5,7 +5,7 @@ from config import LEAGUES, seasons_to_load
 from db import connect
 
 
-def load_history(seasons: list[str] | None = None) -> None:
+def load_history(seasons: list[str] | None = None, *, strict: bool = False) -> None:
     seasons = seasons or seasons_to_load()
     with connect() as conn:
         for code, league in LEAGUES.items():
@@ -16,6 +16,8 @@ def load_history(seasons: list[str] | None = None) -> None:
                     df = pb.scrapers.FootballData(league["pb_name"], season).get_fixtures()
                 except Exception as err:  # a season file may not exist yet
                     print(f"  {code} {season}: could not download ({type(err).__name__}: {err})")
+                    if strict:
+                        raise RuntimeError(f"Could not refresh {code} results for {season}") from err
                     continue
                 df = df.dropna(subset=["goals_home", "goals_away"])  # keep finished matches only
                 rows = [

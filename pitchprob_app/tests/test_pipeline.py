@@ -270,6 +270,56 @@ def test_load_history_shape(env, monkeypatch):
         assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 2  # the unplayed row is dropped
 
 
+def test_load_history_strict_failure(env, monkeypatch):
+    class BrokenScraper:
+        def __init__(self, comp, season, *args):
+            raise OSError("source unavailable")
+
+    monkeypatch.setattr(load_history.pb.scrapers, "FootballData", BrokenScraper)
+    monkeypatch.setattr(load_history, "LEAGUES", {"PL": config.LEAGUES["PL"]})
+
+    with pytest.raises(RuntimeError, match="Could not refresh PL results"):
+        load_history.load_history(["2025-2026"], strict=True)
+
+
+def test_sync_fixtures_strict_failure(env, monkeypatch):
+    class FailedResponse:
+        status_code = 503
+        text = "temporarily unavailable"
+
+    monkeypatch.setattr(sync_fixtures, "FOOTBALL_DATA_TOKEN", "test-token")
+    monkeypatch.setattr(sync_fixtures, "LEAGUES", {"PL": config.LEAGUES["PL"]})
+    monkeypatch.setattr(sync_fixtures.requests, "get", lambda *args, **kwargs: FailedResponse())
+    monkeypatch.setattr(sync_fixtures.time, "sleep", lambda seconds: None)
+
+    with pytest.raises(RuntimeError, match="Could not fetch PL fixtures: HTTP 503"):
+        sync_fixtures.sync_fixtures(strict=True)
+
+
+def test_sync_fixtures_strict_fails_when_no_competitions_are_accessible(env, monkeypatch):
+    class ForbiddenResponse:
+        status_code = 403
+        text = "competition unavailable"
+
+    monkeypatch.setattr(sync_fixtures, "FOOTBALL_DATA_TOKEN", "test-token")
+    monkeypatch.setattr(sync_fixtures, "LEAGUES", {"PL": config.LEAGUES["PL"]})
+    monkeypatch.setattr(sync_fixtures.requests, "get", lambda *args, **kwargs: ForbiddenResponse())
+
+    with pytest.raises(RuntimeError, match="No football-data.org competitions"):
+        sync_fixtures.sync_fixtures(strict=True)
+
+
+def test_streamlit_dashboard_smoke():
+    from streamlit.testing.v1 import AppTest
+
+    script = Path(__file__).resolve().parents[1] / "streamlit_app.py"
+    result = AppTest.from_file(str(script), default_timeout=30).run()
+
+    assert not result.exception
+    assert any(element.value == "PitchProb" for element in result.title)
+    assert any(element.value == "Track record" for element in result.subheader)
+
+
 def test_check_access_and_status(env, monkeypatch, capsys):
     monkeypatch.setattr(sync_fixtures, "FOOTBALL_DATA_TOKEN", "x")
 

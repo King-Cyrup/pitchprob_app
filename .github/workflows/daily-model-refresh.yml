@@ -1,0 +1,50 @@
+name: Daily model refresh
+
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-model-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          ref: pitch
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pitchprob_app/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r pitchprob_app/requirements.txt
+
+      - name: Refresh results, fixtures, forecasts, and models
+        working-directory: pitchprob_app
+        run: python daily_refresh.py
+
+      - name: Commit refreshed app data and models
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pitchprob_app/data/pitchprob.db pitchprob_app/models/*.pkl pitchprob_app/models/*.trained_at
+          if git diff --cached --quiet; then
+            echo "No refreshed artifacts to commit."
+          else
+            git commit -m "Refresh football data and models"
+            git push origin HEAD:pitch
+          fi

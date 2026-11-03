@@ -4,7 +4,8 @@ Football match probability forecasting — trains Dixon-Coles statistical models
 historical results and shows Home / Draw / Away, Over 2.5, and Both Teams to Score
 probabilities for upcoming matches from Europe's top five leagues and the Champions League.
 
-Built with Python, [FastAPI](https://fastapi.tiangolo.com), SQLite, and
+The hosted dashboard is built with [Streamlit](https://streamlit.io); a local
+[FastAPI](https://fastapi.tiangolo.com) interface is also available. Both use SQLite and
 [penaltyblog](https://penaltyblog.readthedocs.io).
 
 ## Quick start
@@ -31,6 +32,40 @@ uvicorn app:app --port 8080
 ```
 
 Open http://127.0.0.1:8080 in a browser.
+
+## Deploy on Streamlit Community Cloud
+
+The Streamlit entry point is `pitchprob_app/streamlit_app.py`. In Streamlit Community
+Cloud, create an app from this GitHub repository, select the `pitch` branch, and set
+the main file path to `pitchprob_app/streamlit_app.py`. The dependency file is beside
+the app entry point. The dashboard reads the committed database and does not need API
+credentials at runtime.
+
+### Daily data and model refresh
+
+The GitHub Actions workflow at `.github/workflows/daily-model-refresh.yml` refreshes
+results and fixtures, retrains the available league models, updates forecasts, grades
+completed predictions, and commits the updated database and model artifacts to
+`pitch`. Streamlit Community Cloud then redeploys from that commit.
+
+Before enabling the workflow:
+
+1. Revoke any football-data.org token that may have been committed in the past, then
+   create a replacement. Never commit `.env` or paste a token into source code.
+2. In GitHub, add the replacement as a repository Actions secret named
+   `FOOTBALL_DATA_TOKEN` under **Settings → Secrets and variables → Actions**.
+3. Ensure GitHub Actions is enabled and allowed to write repository contents. The
+   workflow needs that permission to commit refreshed artifacts.
+4. Confirm `pitch` is the repository's default branch. GitHub scheduled workflows run
+   from the default branch. You can also start a refresh manually from the workflow's
+   **Run workflow** button.
+
+The workflow runs daily at 03:23 UTC. Failed result downloads or transient fixture API
+errors fail the job instead of publishing stale model/database artifacts. The
+domestic league models are retrained from the refreshed results; the Champions League
+uses its bundled model because no Champions League historical-results source is
+configured. The Streamlit app is public unless you restrict access in its Community
+Cloud settings.
 
 ## CLI pipeline
 

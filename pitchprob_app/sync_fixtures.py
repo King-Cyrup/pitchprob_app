@@ -42,12 +42,13 @@ def _model_names(conn, league: str) -> set[str]:
     return names
 
 
-def sync_fixtures() -> None:
+def sync_fixtures(*, strict: bool = False) -> None:
     if not FOOTBALL_DATA_TOKEN:
         raise SystemExit("FOOTBALL_DATA_TOKEN is empty. Put it in the .env file (see the guide).")
     today = datetime.now(timezone.utc).date()
     params = {"dateFrom": today.isoformat(), "dateTo": (today + timedelta(days=FIXTURE_DAYS_AHEAD)).isoformat()}
     aliases = load_aliases()
+    successful_competitions = 0
     with connect() as conn:
         ensure_team_crests(conn)
         for code, league in LEAGUES.items():
@@ -57,13 +58,18 @@ def sync_fixtures() -> None:
             )
             if resp is None:
                 print(f"  {code}: request failed, skipping (network error)")
+                if strict:
+                    raise RuntimeError(f"Could not fetch {code} fixtures")
                 continue
             if resp.status_code != 200:
                 print(f"  {code}: HTTP {resp.status_code}: {resp.text[:200]}")
+                if strict and (resp.status_code == 401 or resp.status_code == 429 or resp.status_code >= 500):
+                    raise RuntimeError(f"Could not fetch {code} fixtures: HTTP {resp.status_code}")
                 if resp.status_code == 429:
                     print("  Too many requests. Wait a minute and run again.")
                     break
                 continue
+            successful_competitions += 1
             names = _model_names(conn, code)
             kept = 0
             for m in resp.json().get("matches", []):
@@ -97,6 +103,8 @@ def sync_fixtures() -> None:
                 kept += 1
             print(f"  {code}: {kept} upcoming fixtures stored")
             time.sleep(7)  # the free plan allows 10 requests per minute
+    if strict and successful_competitions == 0:
+        raise RuntimeError("No football-data.org competitions could be refreshed")
 
 
 def check_access() -> None:
