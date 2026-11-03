@@ -3,7 +3,8 @@ import time
 from datetime import datetime, timedelta, timezone
 import requests
 from config import FD_BASE_URL, FIXTURE_DAYS_AHEAD, FOOTBALL_DATA_TOKEN, LEAGUES, season_label
-from db import connect
+from db import connect, ensure_team_crests
+from modeling import load_model
 from names import load_aliases, resolve
 
 
@@ -34,7 +35,11 @@ def _model_names(conn, league: str) -> set[str]:
         "SELECT home AS n FROM matches WHERE league = ? UNION SELECT away FROM matches WHERE league = ?",
         (league, league),
     ).fetchall()
-    return {r["n"] for r in rows}
+    names = {r["n"] for r in rows}
+    model, _ = load_model(league)
+    if model is not None:
+        names.update(model.teams)
+    return names
 
 
 def sync_fixtures() -> None:
@@ -44,6 +49,7 @@ def sync_fixtures() -> None:
     params = {"dateFrom": today.isoformat(), "dateTo": (today + timedelta(days=FIXTURE_DAYS_AHEAD)).isoformat()}
     aliases = load_aliases()
     with connect() as conn:
+        ensure_team_crests(conn)
         for code, league in LEAGUES.items():
             resp = _fetch_with_retry(
                 f"{FD_BASE_URL}/competitions/{league['fd_code']}/matches",
@@ -66,6 +72,17 @@ def sync_fixtures() -> None:
                 kickoff = m["utcDate"]  # e.g. 2026-11-01T16:30:00Z
                 home = resolve(m["homeTeam"]["name"], m["homeTeam"].get("shortName"), names, aliases)
                 away = resolve(m["awayTeam"]["name"], m["awayTeam"].get("shortName"), names, aliases)
+                now = datetime.now(timezone.utc).isoformat()
+                for team in (m["homeTeam"], m["awayTeam"]):
+                    crest_url = team.get("crest")
+                    if crest_url:
+                        conn.execute(
+                            """INSERT INTO team_crests (league, team_fd, crest_url, updated_at)
+                               VALUES (?, ?, ?, ?)
+                               ON CONFLICT (league, team_fd) DO UPDATE SET
+                                 crest_url = excluded.crest_url, updated_at = excluded.updated_at""",
+                            (code, team["name"], crest_url, now),
+                        )
                 conn.execute(
                     """INSERT INTO fixtures (fd_match_id, league, season, kickoff_utc, status,
                                              home_fd, away_fd, home, away, updated_at)
@@ -75,7 +92,7 @@ def sync_fixtures() -> None:
                          home = excluded.home, away = excluded.away, updated_at = excluded.updated_at""",
                     (m["id"], code, season_label(datetime.fromisoformat(kickoff.replace("Z", "+00:00")).date()),
                      kickoff, m["status"], m["homeTeam"]["name"], m["awayTeam"]["name"], home, away,
-                     datetime.now(timezone.utc).isoformat()),
+                    now),
                 )
                 kept += 1
             print(f"  {code}: {kept} upcoming fixtures stored")

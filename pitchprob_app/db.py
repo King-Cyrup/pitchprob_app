@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS fixtures (         -- upcoming (and recent) matches f
     home TEXT, away TEXT,                           -- names as our model knows them (NULL = not matched yet)
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS team_crests (
+    league TEXT NOT NULL, team_fd TEXT NOT NULL, crest_url TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (league, team_fd)
+);
 CREATE TABLE IF NOT EXISTS predictions (
     fd_match_id INTEGER PRIMARY KEY REFERENCES fixtures(fd_match_id),
     created_at TEXT NOT NULL, model_trained_at TEXT NOT NULL,
@@ -41,6 +46,15 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def ensure_team_crests(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS team_crests (
+               league TEXT NOT NULL, team_fd TEXT NOT NULL, crest_url TEXT NOT NULL,
+               updated_at TEXT NOT NULL, PRIMARY KEY (league, team_fd)
+           )"""
+    )
 
 
 def init_db() -> None:

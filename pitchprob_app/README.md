@@ -2,7 +2,7 @@
 
 Football match probability forecasting — trains Dixon-Coles statistical models on
 historical results and shows Home / Draw / Away, Over 2.5, and Both Teams to Score
-probabilities for upcoming matches from Europe's top five leagues.
+probabilities for upcoming matches from Europe's top five leagues and the Champions League.
 
 Built with Python, [FastAPI](https://fastapi.tiangolo.com), SQLite, and
 [penaltyblog](https://penaltyblog.readthedocs.io).
@@ -52,6 +52,10 @@ status           Show table counts
 teams <CODE>     List the team names the model knows for a league
 daily            Run the full pipeline end-to-end
 ```
+
+The Champions League uses its bundled model (`models/CL.pkl`) for forecasts; its
+upcoming fixtures are fetched from football-data.org. Domestic historical results
+continue to be loaded from football-data.co.uk.
 
 ### Editing the league list
 

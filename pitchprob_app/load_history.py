@@ -9,6 +9,8 @@ def load_history(seasons: list[str] | None = None) -> None:
     seasons = seasons or seasons_to_load()
     with connect() as conn:
         for code, league in LEAGUES.items():
+            if league["pb_name"] is None:
+                continue
             for season in seasons:
                 try:
                     df = pb.scrapers.FootballData(league["pb_name"], season).get_fixtures()

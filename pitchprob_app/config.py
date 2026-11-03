@@ -32,6 +32,7 @@ LEAGUES = {
     "SA": {"name": "Serie A", "fd_code": "SA", "pb_name": "ITA Serie A"},
     "BL1": {"name": "Bundesliga", "fd_code": "BL1", "pb_name": "DEU Bundesliga 1"},
     "FL1": {"name": "Ligue 1", "fd_code": "FL1", "pb_name": "FRA Ligue 1"},
+    "CL": {"name": "Champions League", "fd_code": "CL", "pb_name": None},
 }
 
 FOOTBALL_DATA_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN", "")
