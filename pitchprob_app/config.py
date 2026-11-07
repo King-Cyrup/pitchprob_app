@@ -27,12 +27,18 @@ _load_dotenv()
 # key = our short code (also the football-data.org competition code)
 # fd_code = football-data.org competition code, pb_name = penaltyblog / football-data.co.uk name
 LEAGUES = {
-    "PL": {"name": "Premier League", "fd_code": "PL", "pb_name": "ENG Premier League"},
-    "PD": {"name": "La Liga", "fd_code": "PD", "pb_name": "ESP La Liga"},
-    "SA": {"name": "Serie A", "fd_code": "SA", "pb_name": "ITA Serie A"},
-    "BL1": {"name": "Bundesliga", "fd_code": "BL1", "pb_name": "DEU Bundesliga 1"},
-    "FL1": {"name": "Ligue 1", "fd_code": "FL1", "pb_name": "FRA Ligue 1"},
-    "CL": {"name": "Champions League", "fd_code": "CL", "pb_name": None},
+    "PL": {"name": "Premier League", "fd_code": "PL", "pb_name": "ENG Premier League",
+           "emblem_url": "https://crests.football-data.org/PL.png"},
+    "PD": {"name": "La Liga", "fd_code": "PD", "pb_name": "ESP La Liga",
+           "emblem_url": "https://crests.football-data.org/PD.png"},
+    "SA": {"name": "Serie A", "fd_code": "SA", "pb_name": "ITA Serie A",
+           "emblem_url": "https://crests.football-data.org/SA.png"},
+    "BL1": {"name": "Bundesliga", "fd_code": "BL1", "pb_name": "DEU Bundesliga 1",
+            "emblem_url": "https://crests.football-data.org/BL1.png"},
+    "FL1": {"name": "Ligue 1", "fd_code": "FL1", "pb_name": "FRA Ligue 1",
+            "emblem_url": "https://crests.football-data.org/FL1.png"},
+    "CL": {"name": "Champions League", "fd_code": "CL", "pb_name": None,
+           "emblem_url": "https://crests.football-data.org/CL.png"},
 }
 
 FOOTBALL_DATA_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN", "")

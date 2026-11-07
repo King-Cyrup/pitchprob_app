@@ -74,6 +74,7 @@ def test_fixture_days_grouping():
     assert [day["label"] for day in days[:4]] == ["Today", "Tomorrow", "Sun", "Mon"]
     assert [league["code"] for league in days[0]["leagues"]] == ["FL1", "BL1", "CL"]
     assert days[0]["leagues"][-1]["name"] == "Champions League"
+    assert days[0]["leagues"][-1]["emblem_url"] == "https://crests.football-data.org/CL.png"
     assert [league["code"] for league in days[1]["leagues"]] == ["PL"]
     assert all(league["code"] != "SA" for day in days for league in day["leagues"])
 
@@ -99,6 +100,13 @@ def test_champions_league_fixture_renders_in_app(env, monkeypatch):
                 'Real Madrid', 'Arsenal FC', ?)""",
             (season, kickoff, kickoff),
         )
+        conn.executemany(
+            "INSERT INTO team_crests VALUES ('CL', ?, ?, ?)",
+            [
+                ("Real Madrid", "https://crests.football-data.org/86.svg", kickoff),
+                ("Arsenal FC", "https://crests.football-data.org/57.svg", kickoff),
+            ],
+        )
 
     from fastapi.testclient import TestClient
     import app as webapp
@@ -108,6 +116,58 @@ def test_champions_league_fixture_renders_in_app(env, monkeypatch):
     assert response.status_code == 200
     assert "Champions League" in response.text
     assert "Real Madrid" in response.text and "Arsenal FC" in response.text
+    assert 'src="https://crests.football-data.org/CL.png"' in response.text
+    assert 'src="https://crests.football-data.org/86.svg"' in response.text
+
+
+def test_nextjs_api_contracts(env, monkeypatch):
+    from fastapi.testclient import TestClient
+    import app as webapp
+
+    monkeypatch.delenv("APP_PASSWORD", raising=False)
+    kickoff = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT15:00:00Z")
+    season = config.season_label(datetime.now(timezone.utc).date())
+    with db.connect() as conn:
+        conn.execute(
+            """INSERT INTO fixtures VALUES
+               (7101, 'PL', ?, ?, 'FINISHED', 'Arsenal FC', 'Chelsea FC',
+                'Arsenal', 'Chelsea', ?)""",
+            (season, kickoff, kickoff),
+        )
+        conn.execute(
+            """INSERT INTO predictions
+               (fd_match_id, created_at, model_trained_at, p_home, p_draw, p_away,
+                p_over25, p_btts, xg_home, xg_away)
+               VALUES (7101, ?, ?, 0.48, 0.27, 0.25, 0.55, 0.52, 1.7, 1.1)""",
+            (kickoff, kickoff),
+        )
+        conn.execute(
+            """INSERT INTO grades VALUES
+               (7101, 2, 1, 'H', 0.73, 0.12, 0.4, 0.5, 0.9, ?)""",
+            (kickoff,),
+        )
+
+    client = TestClient(webapp.app)
+    matches = client.get("/api/matches", params={"date": kickoff[:10]})
+    assert matches.status_code == 200
+    match = matches.json()["matches"][0]
+    assert match["forecast"]["pick"] == "H"
+    assert match["result"] == {"home_goals": 2, "away_goals": 1, "outcome": "H"}
+    assert match["pick_hit"] is True
+
+    details = client.get("/api/matches/7101")
+    assert details.status_code == 200
+    assert details.json()["extras"]["goal_lines"] == {"2.5": 0.55}
+
+    days = client.get("/api/results/days")
+    assert days.status_code == 200
+    assert {"date": kickoff[:10], "n": 1, "hits": 1} in days.json()
+    results = client.get("/api/results", params={"date": kickoff[:10]})
+    assert results.json()["summary"] == {"n": 1, "hits": 1, "accuracy": 1.0}
+    insights = client.get("/api/insights", params={"source": "live"})
+    assert insights.json()["n"] == 1
+    assert insights.json()["comparison"][0]["model"] == "Dixon-Coles"
+    assert client.get("/api/insights", params={"source": "backtest"}).json()["available"] is False
 
 
 def test_load_history_skips_leagues_without_a_source(env, monkeypatch):
@@ -233,7 +293,8 @@ def test_sync_fixtures_parsing(env, monkeypatch):
                 "id": i, "name": n, "shortName": s, "tla": "XXX",
                 "crest": f"https://example.test/crests/{i}.png",
             }
-            return {"matches": [
+            return {"teams": [team(1, "Arsenal FC", "Arsenal"), team(2, "Chelsea FC", "Chelsea")],
+                    "matches": [
                 {"id": 5001, "utcDate": tomorrow, "status": "TIMED", "matchday": 10,
                  "homeTeam": team(1, "Arsenal FC", "Arsenal"), "awayTeam": team(2, "Chelsea FC", "Chelsea"),
                  "score": {"winner": None, "fullTime": {"home": None, "away": None}}},

@@ -42,6 +42,36 @@ def _model_names(conn, league: str) -> set[str]:
     return names
 
 
+def _sync_team_crests(conn, code: str, fd_code: str, headers: dict[str, str]) -> bool:
+    resp = _fetch_with_retry(
+        f"{FD_BASE_URL}/competitions/{fd_code}/teams", headers=headers, timeout=30,
+    )
+    if resp is None:
+        print(f"  {code}: team crest refresh failed (network error)")
+        return False
+    if resp.status_code != 200:
+        print(f"  {code}: team crest refresh failed with HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.status_code == 429
+
+    now = datetime.now(timezone.utc).isoformat()
+    updated = 0
+    for team in resp.json().get("teams", []):
+        crest_url = team.get("crest")
+        team_name = team.get("name")
+        if not team_name or not crest_url:
+            continue
+        conn.execute(
+            """INSERT INTO team_crests (league, team_fd, crest_url, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT (league, team_fd) DO UPDATE SET
+                 crest_url = excluded.crest_url, updated_at = excluded.updated_at""",
+            (code, team_name, crest_url, now),
+        )
+        updated += 1
+    print(f"  {code}: {updated} team crests refreshed")
+    return False
+
+
 def sync_fixtures(*, strict: bool = False) -> None:
     if not FOOTBALL_DATA_TOKEN:
         raise SystemExit("FOOTBALL_DATA_TOKEN is empty. Put it in the .env file (see the guide).")
@@ -52,9 +82,14 @@ def sync_fixtures(*, strict: bool = False) -> None:
     with connect() as conn:
         ensure_team_crests(conn)
         for code, league in LEAGUES.items():
+            headers = {"X-Auth-Token": FOOTBALL_DATA_TOKEN}
+            if _sync_team_crests(conn, code, league["fd_code"], headers):
+                print("  Too many requests. Wait a minute and run again.")
+                break
+            time.sleep(7)  # Keep within football-data.org's free-plan request limit.
             resp = _fetch_with_retry(
                 f"{FD_BASE_URL}/competitions/{league['fd_code']}/matches",
-                headers={"X-Auth-Token": FOOTBALL_DATA_TOKEN}, params=params, timeout=30,
+                headers=headers, params=params, timeout=30,
             )
             if resp is None:
                 print(f"  {code}: request failed, skipping (network error)")

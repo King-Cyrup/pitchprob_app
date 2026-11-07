@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 pitchprob_app/.env
 pitchprob_app/.streamlit/secrets.toml
+pitchprob_app/web/node_modules/
+pitchprob_app/web/.next/
+pitchprob_app/web/.env.local
+pitchprob_app/web/*.tsbuildinfo

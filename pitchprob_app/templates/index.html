@@ -388,14 +388,333 @@
     @media (prefers-reduced-motion: reduce) {
       .collapsible-panel, .chevron { transition: none; }
     }
+
+    /* Match Probability Dashboard */
+    :root {
+      --bg: #080d13;
+      --surface: #10161e;
+      --surface-raised: #171f29;
+      --border: #202a35;
+      --border-soft: #2a3644;
+      --ink: #f2f4f8;
+      --ink-soft: #d3d9e3;
+      --muted: #9aa5b7;
+      --faint: #718096;
+      --accent: #21e957;
+      --accent-dim: #16b843;
+      --win: #20e855;
+    }
+    body {
+      background:
+        radial-gradient(ellipse at 87% -10%, #12352c55, transparent 30rem),
+        linear-gradient(135deg, #080c12, #0b1118 68%, #080c12);
+      font-size: .94rem;
+    }
+    main { width: 100%; max-width: none; margin: 0; padding: 0; }
+    .app-layout {
+      grid-template-columns: minmax(290px, 22.35vw) minmax(0, 1fr);
+      gap: 0;
+      min-height: 100vh;
+    }
+    .sidebar {
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+      padding: 25px clamp(20px, 2vw, 36px);
+      border: 0;
+      border-right: 1px solid #26313c;
+      background:
+        radial-gradient(ellipse at 40% 90%, #172431 0, transparent 42%),
+        linear-gradient(180deg, #0c1118 0%, #111a24 70%, #0c121a 100%);
+    }
+    .sidebar::after {
+      position: absolute;
+      z-index: -1;
+      right: -24%;
+      bottom: 0;
+      left: -20%;
+      height: 31%;
+      content: "";
+      opacity: .44;
+      background:
+        linear-gradient(167deg, transparent 0 43%, #263746 43.3% 43.8%, transparent 44.1%),
+        linear-gradient(174deg, transparent 0 52%, #354655 52.3% 52.7%, transparent 53%),
+        repeating-linear-gradient(165deg, transparent 0 10px, #1d2b37 11px 12px, transparent 13px 22px),
+        radial-gradient(ellipse at 50% 100%, #263440, transparent 70%);
+      transform: perspective(170px) rotateX(18deg);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 29px;
+      color: var(--ink);
+      font-size: clamp(1.45rem, 2.1vw, 2rem);
+      font-weight: 750;
+      letter-spacing: -.045em;
+      text-decoration: none;
+    }
+    .brand-mark { width: 46px; height: 46px; color: var(--accent); }
+    .sidebar-block + .sidebar-block { margin-top: 24px; padding-top: 21px; border-top: 1px solid #25313d; }
+    .sidebar-heading {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-bottom: 15px;
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 650;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .sidebar-heading svg, .sec-hd h2 svg {
+      width: 23px;
+      height: 23px;
+      flex: 0 0 auto;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+    .date-picker { grid-template-columns: 30px minmax(0, 1fr) 36px; gap: 6px; }
+    .date-arrow {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 48px;
+      border: 0;
+      border-radius: 50%;
+      background: #18212b;
+      color: var(--ink);
+      font-size: 1.35rem;
+    }
+    #dates-previous { width: 30px; background: transparent; }
+    .day-tabs { gap: 7px; }
+    .day-btn {
+      min-height: 76px;
+      padding: 8px 4px;
+      border: 1px solid transparent;
+      border-radius: 17px;
+      background: #171f29;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .day-btn:hover { border-color: #384453; color: var(--ink); }
+    .day-btn[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #06220e;
+      box-shadow: 0 6px 22px #20e85525;
+    }
+    .day-btn[aria-pressed="true"] .day-dt { color: #0c3517; }
+    .day-lbl { font-size: .84rem; font-weight: 650; }
+    .day-dt { color: #b5bfce; font-size: .82rem; }
+    .league-list { gap: 4px; }
+    .league-btn {
+      min-height: 54px;
+      padding: 10px 15px;
+      border-left: 3px solid transparent;
+      border-radius: 14px;
+      color: var(--ink);
+      font-size: .9rem;
+    }
+    .league-btn:hover { border-color: transparent; background: #ffffff09; }
+    .league-btn[aria-pressed="true"] {
+      border-color: transparent;
+      border-left-color: var(--accent);
+      background: linear-gradient(90deg, #202a36, #1b2530);
+      color: var(--ink);
+    }
+    .league-btn > span:first-child { display: flex; align-items: center; gap: 12px; }
+    .league-icon { width: 28px; height: 28px; flex: 0 0 28px; object-fit: contain; color: #edf2f7; font-size: 1.1rem; text-align: center; }
+    .league-icon-fallback { display: grid; place-items: center; }
+    .league-icon-fallback[hidden] { display: none; }
+    .league-count { color: var(--ink-soft); font-size: .85rem; }
+    .sidebar-footer {
+      position: relative;
+      z-index: 1;
+      margin-top: auto;
+      padding: 20px 0 5px;
+      color: #aeb8c7;
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+    .sidebar-footer strong { color: var(--ink); }
+    .footer-mark { display: block; width: 37px; height: 37px; margin-bottom: 7px; color: var(--accent); }
+    .content { min-width: 0; padding: 37px clamp(24px, 2.4vw, 44px) 48px; }
+    header {
+      position: relative;
+      margin-bottom: 38px;
+      padding: 1px 220px 0 0;
+    }
+    .mark { margin-bottom: 10px; color: var(--accent); font-size: .88rem; letter-spacing: .04em; }
+    .mark-dot { width: 12px; height: 12px; }
+    h1 { margin-bottom: 4px; font-size: clamp(3rem, 4.4vw, 4.75rem); line-height: 1.08; letter-spacing: -.055em; }
+    .tagline { max-width: 800px; color: #aeb8c8; font-size: 1.15rem; line-height: 1.5; }
+    .time-zone {
+      position: absolute;
+      top: 44px;
+      right: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 17px;
+      border: 1px solid #222d39;
+      border-radius: 30px;
+      background: #171f29dd;
+      color: var(--ink-soft);
+      font-size: .9rem;
+    }
+    .time-zone svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+    .time-zone .chevron { width: 8px; height: 8px; margin-left: 5px; transform: rotate(45deg); }
+    .sec-hd {
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 0 10px;
+      border: 0;
+    }
+    .sec-hd h2 { display: flex; align-items: center; gap: 14px; color: var(--ink); font-size: 1.35rem; }
+    .sec-hd h2 svg { width: 30px; height: 30px; }
+    .sec-hd::after {
+      align-self: flex-end;
+      width: 110px;
+      height: 4px;
+      margin-left: auto;
+      background: var(--accent);
+      content: "";
+    }
+    .lg-grp + .lg-grp { margin-top: 20px; }
+    .pnl { border: 1px solid #202b36; border-radius: 19px; background: #10161e; }
+    .lg-toggle { min-height: 75px; padding: 15px 23px; border-radius: 18px; background: #141b24; color: var(--ink); }
+    .lg-toggle:hover { background: #18212b; }
+    .lg-name { display: flex; align-items: center; gap: 15px; font-size: 1.13rem; }
+    .league-emblem { display: inline-grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; }
+    .league-emblem img { width: 100%; height: 100%; object-fit: contain; }
+    .league-emblem img[hidden], .league-emblem .league-icon-fallback[hidden] { display: none; }
+    .lg-cnt { color: #bac3d1; font-size: .9rem; }
+    .lg-meta { gap: 17px; }
+    .lg-toggle .chevron { width: 10px; height: 10px; }
+    .fixture-stack { gap: 5px; padding: 4px; background: transparent; }
+    .fixture-card { border: 1px solid #1d2732; border-radius: 16px; background: #111820; }
+    .fixture-toggle {
+      grid-template-columns: 90px minmax(0, 1fr) 34px;
+      gap: clamp(12px, 1.5vw, 26px);
+      min-height: 104px;
+      padding: 15px 24px;
+    }
+    .fixture-toggle:hover { background: #151e28; }
+    .kickoff { padding-right: 15px; border-right: 1px solid #202a35; }
+    .kickoff-time { font-size: 1.15rem; }
+    .kickoff-date { margin-top: 3px; color: #a7b2c2; font-size: .9rem; }
+    .matchup { grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1fr); gap: clamp(12px, 2vw, 32px); }
+    .team-side { gap: 13px; }
+    .team-side.away { flex-direction: row-reverse; text-align: right; }
+    .team-crest { flex-basis: 50px; width: 50px; height: 54px; background: transparent; font-size: .8rem; }
+    .team-copy { gap: 9px; }
+    .team-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+    .team-name { font-size: 1rem; font-weight: 550; }
+    .team-probability strong { color: var(--win); font-size: 1.25rem; }
+    .team-side.away .team-heading { flex-direction: row-reverse; }
+    .team-side.away .team-probability strong { color: #39aaff; }
+    .prob-track {
+      height: 7px;
+      border-radius: 10px;
+      background: #222b35;
+    }
+    .prob-track::-webkit-progress-bar { border-radius: 10px; background: #222b35; }
+    .prob-track::-webkit-progress-value { border-radius: 10px; background: var(--win); }
+    .team-side.away .prob-track::-webkit-progress-value { background: #39aaff; }
+    .team-side.away .prob-track::-moz-progress-bar { background: #39aaff; }
+    .match-center { gap: 2px; }
+    .versus { color: #a3adbd; font-size: .82rem; font-weight: 500; }
+    .draw-prob { color: #b9c2d0; font-size: .9rem; }
+    .draw-track { width: 100%; height: 6px; overflow: hidden; border-radius: 8px; background: #222b35; }
+    .draw-track span { display: block; height: 100%; border-radius: inherit; background: #8892a0; }
+    .match-chevron { justify-self: center; width: 10px; height: 10px; padding: 11px; border-radius: 50%; background: #1d2630; box-sizing: content-box; }
+
+    @media (max-width: 1100px) {
+      .app-layout { grid-template-columns: 270px minmax(0, 1fr); }
+      .content { padding-right: 24px; padding-left: 24px; }
+      header { padding-right: 0; }
+      .time-zone { top: 3px; }
+      .matchup { grid-template-columns: minmax(0, 1fr) 66px minmax(0, 1fr); gap: 8px; }
+      .fixture-toggle { grid-template-columns: 74px minmax(0, 1fr) 22px; gap: 12px; padding-right: 14px; padding-left: 14px; }
+      .team-side { gap: 7px; }
+      .team-crest { flex-basis: 32px; width: 32px; height: 36px; }
+      .team-name { font-size: .78rem; }
+      .team-probability strong { font-size: .95rem; }
+      .team-copy { gap: 6px; }
+      .team-heading { gap: 5px; }
+    }
+    @media (max-width: 760px) {
+      .app-layout { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; max-height: none; padding: 15px 18px 18px; overflow: visible; border-right: 0; border-bottom: 1px solid #26313c; }
+      .sidebar::after, .sidebar-footer { display: none; }
+      .brand { margin-bottom: 15px; font-size: 1.45rem; }
+      .brand-mark { width: 36px; height: 36px; }
+      .sidebar-block + .sidebar-block { margin-top: 14px; padding-top: 13px; }
+      .sidebar-heading { margin-bottom: 9px; font-size: .9rem; }
+      .day-btn { min-height: 54px; border-radius: 12px; }
+      .league-list { display: flex; flex-wrap: wrap; }
+      .league-btn { min-height: 42px; width: auto; padding: 7px 10px; border-radius: 11px; font-size: .8rem; }
+      .content { padding: 24px 18px 36px; }
+      header { margin-bottom: 28px; padding-right: 0; }
+      h1 { font-size: 3rem; }
+      .tagline { max-width: 650px; font-size: 1rem; }
+      .time-zone { position: static; display: inline-flex; margin-top: 15px; padding: 8px 12px; font-size: .8rem; }
+      .sec-hd h2 { font-size: 1.15rem; }
+      .sec-hd::after { width: 56px; }
+      .lg-toggle { min-height: 60px; padding: 12px 14px; }
+      .lg-name { gap: 9px; font-size: .95rem; }
+      .lg-cnt { font-size: .76rem; }
+      .fixture-toggle { grid-template-columns: 55px minmax(0, 1fr) 10px; gap: 8px; min-height: 92px; padding: 12px 9px; }
+      .kickoff { padding-right: 7px; }
+      .kickoff-time { font-size: .9rem; }
+      .kickoff-date { font-size: .68rem; }
+      .matchup { grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr); gap: 5px; }
+      .team-side, .team-side.away { flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+      .team-copy { width: 100%; gap: 5px; }
+      .team-heading, .team-side.away .team-heading { flex-direction: column; gap: 2px; }
+      .team-name { overflow: visible; font-size: .7rem; line-height: 1.15; text-align: center; text-overflow: clip; white-space: normal; }
+      .team-probability strong { font-size: .78rem; }
+      .team-crest { flex-basis: 31px; width: 31px; height: 33px; font-size: .6rem; }
+      .prob-track { height: 5px; }
+      .draw-prob { font-size: .61rem; }
+      .draw-track { height: 4px; }
+      .match-center { min-width: 0; }
+      .versus { font-size: .6rem; }
+      .match-chevron { width: 7px; height: 7px; padding: 7px; }
+      .forecast-pending { font-size: .62rem; }
+      .fixture-detail-inner { padding: .75rem; }
+      .h2h-match { grid-template-columns: 52px minmax(0, 1fr) auto minmax(0, 1fr); gap: .35rem; padding: .5rem .4rem; font-size: .68rem; }
+      .h2h-date { font-size: .61rem; }
+    }
   </style>
 </head>
 <body>
   <main>
     <div class="app-layout">
       <aside class="sidebar" aria-label="Fixture navigation">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true">
+            <path d="M4 31.5 12.5 17a4 4 0 0 1 7 0v15H7a3 3 0 0 1-3-3.5Z" fill="currentColor" opacity=".8"/>
+            <rect x="21" y="12" width="9" height="21" rx="3" fill="currentColor" opacity=".9"/>
+            <rect x="32" y="5" width="9" height="28" rx="3" fill="currentColor"/>
+          </svg>
+          <span>PitchProb</span>
+        </div>
         <section class="sidebar-block" aria-labelledby="date-heading">
-          <h2 class="sidebar-heading" id="date-heading">Match date</h2>
+          <h2 class="sidebar-heading" id="date-heading">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M7.5 3v4M16.5 3v4M4 9h16M8 13h3v3H8z"/></svg>
+            Match date
+          </h2>
           <div class="date-picker">
             <button class="date-arrow" id="dates-previous" type="button" aria-label="Show previous dates">&larr;</button>
             <nav class="day-tabs" role="tablist" aria-label="Select match day">
@@ -414,9 +733,20 @@
         </section>
 
         <section class="sidebar-block" aria-labelledby="leagues-heading">
-          <h2 class="sidebar-heading" id="leagues-heading">Leagues</h2>
+          <h2 class="sidebar-heading" id="leagues-heading">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+            Leagues
+          </h2>
           <nav class="league-list" id="league-list" aria-label="Filter fixtures by league"></nav>
         </section>
+        <div class="sidebar-footer">
+          <svg class="footer-mark" viewBox="0 0 42 42" aria-hidden="true">
+            <path d="M4 31.5 12.5 17a4 4 0 0 1 7 0v15H7a3 3 0 0 1-3-3.5Z" fill="currentColor" opacity=".8"/>
+            <rect x="21" y="12" width="9" height="21" rx="3" fill="currentColor" opacity=".9"/>
+            <rect x="32" y="5" width="9" height="28" rx="3" fill="currentColor"/>
+          </svg>
+          <p>Smarter Predictions.<br><strong>Deeper Insights.</strong></p>
+        </div>
       </aside>
 
       <div class="content">
@@ -424,17 +754,24 @@
         <header>
           <div class="mark"><span class="mark-dot" aria-hidden="true"></span>Match probability insights</div>
           <h1>PitchProb</h1>
-          <p class="tagline">
+          <!-- <p class="tagline">
             A statistical model trained on years of match results.
             See the probabilities for every fixture, and how the forecasts hold up over time.
-          </p>
+          </p> -->
+          <!-- <div class="time-zone">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Times in UTC
+            <span class="chevron" aria-hidden="true"></span>
+          </div> -->
         </header>
 
         <!-- Upcoming matches -->
         <section aria-labelledby="upcoming-heading">
           <div class="sec-hd">
-            <h2 id="upcoming-heading">Upcoming fixtures</h2>
-            <span class="sec-hint">Times in UTC</span>
+            <h2 id="upcoming-heading">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M7.5 3v4M16.5 3v4M4 9h16M8 13h3v3H8z"/></svg>
+              Upcoming Fixtures
+            </h2>
           </div>
 
           <div id="match-days">
@@ -443,12 +780,21 @@
                  id="panel-{{ day.date }}" aria-labelledby="tab-{{ day.date }}"
                  data-day="{{ day.date }}" {% if not loop.first %}hidden{% endif %}>
           {% for league in day.leagues %}
-          <section class="lg-grp" data-league="{{ league.code }}" data-league-name="{{ league.name }}">
+          <section class="lg-grp" data-league="{{ league.code }}" data-league-name="{{ league.name }}"
+                   data-emblem-url="{{ league.emblem_url or '' }}">
             <div class="pnl">
               <h3 class="lg-title">
                 <button class="lg-toggle" type="button" aria-expanded="true"
                         aria-controls="league-{{ day.date }}-{{ loop.index }}">
-                  <span class="lg-name">{{ league.name }}</span>
+                  <span class="lg-name">
+                    <span class="league-emblem" aria-hidden="true">
+                      {% if league.emblem_url %}
+                      <img src="{{ league.emblem_url }}" alt="" loading="lazy" decoding="async">
+                      <span class="league-icon-fallback" hidden>⚽</span>
+                      {% else %}⚽{% endif %}
+                    </span>
+                    {{ league.name }}
+                  </span>
                   <span class="lg-meta">
                     <span class="lg-cnt">{{ league.fixtures|length }} match{{ '' if league.fixtures|length == 1 else 'es' }}</span>
                     <span class="chevron" aria-hidden="true"></span>
@@ -473,10 +819,14 @@
                               <span class="team-initials" {% if f.home_crest %}hidden{% endif %}>{{ f.home_badge }}</span>
                             </span>
                             <span class="team-copy">
-                              <span class="team-name">{{ f.home or f.home_fd }}</span>
                               {% if f.p_home is not none %}
-                              <span class="team-probability"><span>Win chance</span><strong>{{ "%.0f"|format(f.p_home * 100) }}%</strong></span>
+                              <span class="team-heading">
+                                <span class="team-name">{{ f.home or f.home_fd }}</span>
+                                <span class="team-probability" aria-label="Home win probability"><strong>{{ "%.0f"|format(f.p_home * 100) }}%</strong></span>
+                              </span>
                               <progress class="prob-track" value="{{ "%.1f"|format(f.p_home * 100) }}" max="100" aria-label="{{ f.home or f.home_fd }} win probability">{{ "%.0f"|format(f.p_home * 100) }}%</progress>
+                              {% else %}
+                              <span class="team-heading"><span class="team-name">{{ f.home or f.home_fd }}</span></span>
                               {% endif %}
                             </span>
                           </span>
@@ -484,6 +834,7 @@
                           <span class="match-center">
                             <span class="versus">VS</span>
                             <span class="draw-prob">Draw {{ "%.0f"|format(f.p_draw * 100) }}%</span>
+                            <span class="draw-track" aria-hidden="true"><span style="width: {{ "%.1f"|format(f.p_draw * 100) }}%"></span></span>
                           </span>
                           {% else %}
                           <span class="match-center"><span class="versus">VS</span></span>
@@ -494,10 +845,14 @@
                               <span class="team-initials" {% if f.away_crest %}hidden{% endif %}>{{ f.away_badge }}</span>
                             </span>
                             <span class="team-copy">
-                              <span class="team-name">{{ f.away or f.away_fd }}</span>
                               {% if f.p_away is not none %}
-                              <span class="team-probability"><span>Win chance</span><strong>{{ "%.0f"|format(f.p_away * 100) }}%</strong></span>
+                              <span class="team-heading">
+                                <span class="team-name">{{ f.away or f.away_fd }}</span>
+                                <span class="team-probability" aria-label="Away win probability"><strong>{{ "%.0f"|format(f.p_away * 100) }}%</strong></span>
+                              </span>
                               <progress class="prob-track" value="{{ "%.1f"|format(f.p_away * 100) }}" max="100" aria-label="{{ f.away or f.away_fd }} win probability">{{ "%.0f"|format(f.p_away * 100) }}%</progress>
+                              {% else %}
+                              <span class="team-heading"><span class="team-name">{{ f.away or f.away_fd }}</span></span>
                               {% endif %}
                             </span>
                           </span>
@@ -714,15 +1069,42 @@
       }
       leagueList.replaceChildren();
 
-      const addLeagueButton = (name, code, count) => {
+      const addLeagueButton = (name, code, count, emblemUrl = "") => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "league-btn";
         button.dataset.league = code;
         button.setAttribute("aria-pressed", String(code === selectedLeague));
-        const label = document.createElement("span");
-        label.textContent = name;
-        button.append(label);
+        const icons = {all: "⚽", PL: "🏴", PD: "🇪🇸", SA: "🇮🇹", BL1: "🇩🇪", FL1: "🇫🇷", CL: "✦"};
+        const icon = document.createElement(emblemUrl ? "img" : "span");
+        icon.className = "league-icon";
+        icon.setAttribute("aria-hidden", "true");
+        if (emblemUrl) {
+          icon.src = emblemUrl;
+          icon.alt = "";
+          icon.loading = "lazy";
+          icon.decoding = "async";
+          const fallback = document.createElement("span");
+          fallback.className = "league-icon league-icon-fallback";
+          fallback.textContent = icons[code] || "⚽";
+          fallback.hidden = true;
+          icon.addEventListener("error", () => {
+            icon.hidden = true;
+            fallback.hidden = false;
+          }, {once: true});
+          const label = document.createElement("span");
+          label.textContent = name;
+          const labelGroup = document.createElement("span");
+          labelGroup.append(icon, fallback, label);
+          button.append(labelGroup);
+        } else {
+          icon.textContent = icons[code] || "⚽";
+          const label = document.createElement("span");
+          label.textContent = name;
+          const labelGroup = document.createElement("span");
+          labelGroup.append(icon, label);
+          button.append(labelGroup);
+        }
         if (count !== null) {
           const badge = document.createElement("span");
           badge.className = "league-count";
@@ -741,7 +1123,7 @@
       ));
       for (const group of leagues) {
         addLeagueButton(group.dataset.leagueName, group.dataset.league,
-          group.querySelectorAll(".fixture-card").length);
+          group.querySelectorAll(".fixture-card").length, group.dataset.emblemUrl);
       }
     }
 
@@ -778,7 +1160,14 @@
       logo.addEventListener("error", () => {
         logo.hidden = true;
         logo.nextElementSibling.hidden = false;
-      });
+      }, {once: true});
+    }
+
+    for (const logo of document.querySelectorAll(".league-emblem img")) {
+      logo.addEventListener("error", () => {
+        logo.hidden = true;
+        logo.nextElementSibling.hidden = false;
+      }, {once: true});
     }
 
     for (const button of document.querySelectorAll(".lg-toggle")) {

@@ -1,9 +1,10 @@
 """The web app: one page plus a small JSON API. Start with:  uvicorn app:app --port 8080"""
 import os
 import secrets
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
@@ -160,6 +161,7 @@ def _fixture_days(fixtures: list[dict], today: date | None = None) -> list[dict]
                 {
                     "code": code,
                     "name": LEAGUES.get(code, {}).get("name", code),
+                    "emblem_url": LEAGUES.get(code, {}).get("emblem_url"),
                     "fixtures": league_fixtures[code],
                 }
                 for code in league_codes
@@ -190,6 +192,114 @@ def _ledger(conn) -> dict:
            ORDER BY f.kickoff_utc DESC LIMIT 20"""
     ).fetchall()
     return {"summary": summary, "recent": [dict(r) for r in recent]}
+
+
+def _api_match(row) -> dict:
+    match = dict(row)
+    probabilities = None
+    pick = None
+    if match["p_home"] is not None:
+        values = {
+            "H": match["p_home"],
+            "D": match["p_draw"],
+            "A": match["p_away"],
+        }
+        pick = max(values, key=values.get)
+        probabilities = {
+            "p_home": match["p_home"],
+            "p_draw": match["p_draw"],
+            "p_away": match["p_away"],
+            "p_over25": match["p_over25"],
+            "p_btts": match["p_btts"],
+            "xg_home": match["xg_home"],
+            "xg_away": match["xg_away"],
+            "model": "Dixon-Coles",
+            "pick": pick,
+            "pick_prob": values[pick],
+        }
+
+    result = None
+    if match["home_goals"] is not None:
+        result = {
+            "home_goals": match["home_goals"],
+            "away_goals": match["away_goals"],
+            "outcome": match["outcome"],
+        }
+
+    return {
+        "id": match["fd_match_id"],
+        "league": match["league"],
+        "league_name": LEAGUES.get(match["league"], {}).get("name", match["league"]),
+        "league_emblem_url": LEAGUES.get(match["league"], {}).get("emblem_url"),
+        "kickoff_utc": match["kickoff_utc"],
+        "status": match["status"],
+        "matchday": match["matchday"],
+        "home": match["home"] or match["home_fd"],
+        "away": match["away"] or match["away_fd"],
+        "home_crest": match["home_crest"],
+        "away_crest": match["away_crest"],
+        "forecast": probabilities,
+        "result": result,
+        "pick_hit": pick == match["outcome"] if result and pick else None,
+        "flags": [],
+        "note": (
+            "Team name not matched yet"
+            if match["home"] is None or match["away"] is None
+            else "No forecast available"
+        ) if probabilities is None else None,
+        "updated_at": match["prediction_created_at"] or match["updated_at"],
+    }
+
+
+_MATCH_SELECT = """
+    SELECT f.fd_match_id, f.league, f.kickoff_utc, f.status, {matchday_select} AS matchday,
+           f.home_fd, f.away_fd, f.home, f.away, f.updated_at,
+           home_crest.crest_url AS home_crest, away_crest.crest_url AS away_crest,
+           p.created_at AS prediction_created_at, p.p_home, p.p_draw, p.p_away,
+           p.p_over25, p.p_btts, p.xg_home, p.xg_away,
+           g.home_goals, g.away_goals, g.outcome
+    FROM fixtures f
+    LEFT JOIN team_crests home_crest
+      ON home_crest.league = f.league AND home_crest.team_fd = f.home_fd
+    LEFT JOIN team_crests away_crest
+      ON away_crest.league = f.league AND away_crest.team_fd = f.away_fd
+    LEFT JOIN predictions p ON p.fd_match_id = f.fd_match_id
+    LEFT JOIN grades g ON g.fd_match_id = f.fd_match_id
+"""
+
+
+def _match_select(conn) -> str:
+    ensure_team_crests(conn)
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(fixtures)")}
+    matchday_select = "f.matchday" if "matchday" in columns else "NULL"
+    return _MATCH_SELECT.format(matchday_select=matchday_select)
+
+
+def _parse_api_date(value: str | None) -> date:
+    if value is None:
+        return datetime.now(timezone.utc).date()
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="date must use YYYY-MM-DD format") from err
+    if parsed.isoformat() != value:
+        raise HTTPException(status_code=400, detail="date must use YYYY-MM-DD format")
+    return parsed
+
+
+def _graded_rows(conn, day: str | None = None) -> list[dict]:
+    filters = ["g.fd_match_id IS NOT NULL", "p.fd_match_id IS NOT NULL"]
+    params: list[str] = []
+    if day is not None:
+        filters.append("substr(f.kickoff_utc, 1, 10) = ?")
+        params.append(day)
+    rows = conn.execute(
+        _match_select(conn)
+        + " WHERE " + " AND ".join(filters)
+        + " ORDER BY f.kickoff_utc DESC",
+        params,
+    ).fetchall()
+    return [_api_match(row) for row in rows]
 
 
 @app.get("/healthz")
@@ -238,3 +348,246 @@ def api_fixtures() -> list[dict]:
 def api_ledger() -> dict:
     with connect() as conn:
         return _ledger(conn)
+
+
+@app.get("/api/matches", dependencies=[Depends(require_login)])
+def api_matches(date_param: str | None = Query(default=None, alias="date")) -> dict:
+    match_day = _parse_api_date(date_param)
+    with connect() as conn:
+        rows = conn.execute(
+            _match_select(conn)
+            + """ WHERE substr(f.kickoff_utc, 1, 10) = ?
+                  ORDER BY f.kickoff_utc, f.league, f.home_fd""",
+            (match_day.isoformat(),),
+        ).fetchall()
+    return {
+        "date": match_day.isoformat(),
+        "matches": [_api_match(row) for row in rows],
+        "leagues": [
+            {
+                "code": code,
+                "name": league["name"],
+                "emblem_url": league.get("emblem_url"),
+            }
+            for code, league in LEAGUES.items()
+        ],
+    }
+
+
+@app.get("/api/matches/{match_id}", dependencies=[Depends(require_login)])
+def api_match(match_id: int) -> dict:
+    with connect() as conn:
+        row = conn.execute(
+            _match_select(conn) + " WHERE f.fd_match_id = ?",
+            (match_id,),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Match not found")
+
+        match = _api_match(row)
+        context_fixture = {
+            "league": match["league"],
+            "home": row["home"],
+            "away": row["away"],
+        }
+        _add_match_context(conn, [context_fixture])
+        season_rows = conn.execute(
+            """SELECT home, away, home_goals, away_goals
+               FROM matches
+               WHERE league = ? AND season = (
+                   SELECT season FROM fixtures WHERE fd_match_id = ?
+               ) AND match_date < ?
+               ORDER BY match_date DESC""",
+            (match["league"], match_id, match["kickoff_utc"][:10]),
+        ).fetchall()
+
+        points = defaultdict(int)
+        games = defaultdict(int)
+        goals = goals_against = 0
+        for result in season_rows:
+            home_goals, away_goals = result["home_goals"], result["away_goals"]
+            goals += home_goals + away_goals
+            games[result["home"]] += 1
+            games[result["away"]] += 1
+            if home_goals > away_goals:
+                points[result["home"]] += 3
+            elif home_goals < away_goals:
+                points[result["away"]] += 3
+            else:
+                points[result["home"]] += 1
+                points[result["away"]] += 1
+
+        forecast = match["forecast"]
+        details = {
+            "goal_lines": {"2.5": forecast["p_over25"]} if forecast else {},
+            "handicap": [],
+            "scorelines": [],
+            "context": {
+                "form_home": context_fixture["home_form"],
+                "form_away": context_fixture["away_form"],
+                "h2h": [
+                    {
+                        "date": previous["match_date"],
+                        "home": previous["home"],
+                        "away": previous["away"],
+                        "score": f'{previous["home_goals"]}-{previous["away_goals"]}',
+                    }
+                    for previous in context_fixture["h2h"][:5]
+                ],
+                "season_ppg_home": (
+                    points[row["home"]] / games[row["home"]]
+                    if row["home"] and games[row["home"]] else None
+                ),
+                "season_ppg_away": (
+                    points[row["away"]] / games[row["away"]]
+                    if row["away"] and games[row["away"]] else None
+                ),
+                "league_gpm": goals / len(season_rows) if season_rows else None,
+            },
+        }
+    return {**match, "extras": details}
+
+
+@app.get("/api/results/days", dependencies=[Depends(require_login)])
+def api_result_days() -> list[dict]:
+    with connect() as conn:
+        rows = _graded_rows(conn)
+    days: dict[str, dict[str, int]] = {}
+    for match in rows:
+        day = match["kickoff_utc"][:10]
+        summary = days.setdefault(day, {"n": 0, "hits": 0})
+        summary["n"] += 1
+        summary["hits"] += int(bool(match["pick_hit"]))
+    return [{"date": day, **summary} for day, summary in sorted(days.items(), reverse=True)]
+
+
+@app.get("/api/results", dependencies=[Depends(require_login)])
+def api_results(date_param: str | None = Query(default=None, alias="date")) -> dict:
+    result_day = _parse_api_date(date_param)
+    with connect() as conn:
+        matches = _graded_rows(conn, result_day.isoformat())
+    grouped: dict[str, dict] = {}
+    for match in matches:
+        group = grouped.setdefault(match["league"], {
+            "code": match["league"],
+            "name": match["league_name"],
+            "emblem_url": match["league_emblem_url"],
+            "matches": [],
+        })
+        group["matches"].append(match)
+    hits = sum(bool(match["pick_hit"]) for match in matches)
+    return {
+        "date": result_day.isoformat(),
+        "summary": {"n": len(matches), "hits": hits, "accuracy": hits / len(matches) if matches else None},
+        "leagues": list(grouped.values()),
+    }
+
+
+@app.get("/api/insights", dependencies=[Depends(require_login)])
+def api_insights(source: str = "live") -> dict:
+    if source not in {"live", "backtest"}:
+        raise HTTPException(status_code=400, detail="source must be live or backtest")
+
+    if source == "backtest":
+        return {
+            "source": source,
+            "available": False,
+            "n": 0,
+            "note": "Walk-forward backtest forecasts are not stored in this database.",
+            "confidence": [],
+            "thresholds": [],
+            "calibration": [],
+            "comparison": [],
+            "leagues": [],
+        }
+
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT f.league, p.p_home, p.p_draw, p.p_away,
+                      g.outcome, g.logloss_1x2, g.base_logloss_1x2
+               FROM predictions p
+               JOIN grades g ON g.fd_match_id = p.fd_match_id
+               JOIN fixtures f ON f.fd_match_id = p.fd_match_id
+               ORDER BY f.kickoff_utc"""
+        ).fetchall()
+        goal_rows = conn.execute(
+            """SELECT league, COUNT(*) AS n,
+                      AVG(home_goals + away_goals) AS goals_per_match
+               FROM matches GROUP BY league ORDER BY league"""
+        ).fetchall()
+
+    scored = []
+    for row in rows:
+        probs = {"H": row["p_home"], "D": row["p_draw"], "A": row["p_away"]}
+        pick = max(probs, key=probs.get)
+        scored.append({
+            "league": row["league"],
+            "confidence": probs[pick],
+            "lead": probs[pick] - sorted(probs.values())[-2],
+            "hit": pick == row["outcome"],
+            "logloss": row["logloss_1x2"],
+            "baseline_logloss": row["base_logloss_1x2"],
+        })
+
+    confidence_bands = [(0.30, 0.40), (0.40, 0.50), (0.50, 0.60), (0.60, 0.70), (0.70, 1.01)]
+    confidence = []
+    for low, high in confidence_bands:
+        band = [item for item in scored if low <= item["confidence"] < high]
+        if band:
+            confidence.append({
+                "from": low,
+                "to": min(high, 1.0),
+                "n": len(band),
+                "confidence": sum(item["confidence"] for item in band) / len(band),
+                "hit_rate": sum(item["hit"] for item in band) / len(band),
+            })
+
+    lead_bands = [(0, 0.05), (0.05, 0.10), (0.10, 0.15), (0.15, 0.20), (0.20, 0.30), (0.30, 1.01)]
+    thresholds = []
+    for low, high in lead_bands:
+        band = [item for item in scored if low <= item["lead"] < high]
+        if band:
+            thresholds.append({
+                "from": low,
+                "to": min(high, 1.0),
+                "n": len(band),
+                "hit_rate": sum(item["hit"] for item in band) / len(band),
+            })
+
+    calibration = confidence
+    count = len(scored)
+    comparison = []
+    if scored:
+        comparison = [
+            {
+                "model": "Dixon-Coles",
+                "n": count,
+                "logloss": sum(item["logloss"] for item in scored) / count,
+                "pick_rate": sum(item["hit"] for item in scored) / count,
+            },
+            {
+                "model": "Historical baseline",
+                "n": count,
+                "logloss": sum(item["baseline_logloss"] for item in scored) / count,
+                "pick_rate": None,
+            },
+        ]
+
+    return {
+        "source": source,
+        "available": True,
+        "n": count,
+        "confidence": confidence,
+        "thresholds": thresholds,
+        "calibration": calibration,
+        "comparison": comparison,
+        "leagues": [
+            {
+                "league": row["league"],
+                "league_name": LEAGUES.get(row["league"], {}).get("name", row["league"]),
+                "n": row["n"],
+                "goals_per_match": row["goals_per_match"],
+            }
+            for row in goal_rows
+        ],
+    }

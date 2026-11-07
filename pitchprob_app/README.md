@@ -4,9 +4,10 @@ Football match probability forecasting — trains Dixon-Coles statistical models
 historical results and shows Home / Draw / Away, Over 2.5, and Both Teams to Score
 probabilities for upcoming matches from Europe's top five leagues and the Champions League.
 
-The hosted dashboard is built with [Streamlit](https://streamlit.io); a local
-[FastAPI](https://fastapi.tiangolo.com) interface is also available. Both use SQLite and
-[penaltyblog](https://penaltyblog.readthedocs.io).
+The dashboard frontend is built with Next.js and TypeScript in `web/`. It reads the
+existing SQLite-backed [FastAPI](https://fastapi.tiangolo.com) service; the legacy
+[Streamlit](https://streamlit.io) dashboard remains available. Forecasts are produced
+with [penaltyblog](https://penaltyblog.readthedocs.io).
 
 ## Quick start
 
@@ -33,6 +34,36 @@ uvicorn app:app --port 8080
 
 Open http://127.0.0.1:8080 in a browser.
 
+## Run the Next.js dashboard
+
+Start the API from `pitchprob_app/` in one terminal:
+
+```bash
+uvicorn app:app --port 8080
+```
+
+In another terminal:
+
+```bash
+cd web
+npm ci
+```
+
+Copy `web/.env.example` to `web/.env.local` and set `API_BASE_URL` to the FastAPI
+address. If the API uses `APP_USERNAME` and `APP_PASSWORD`, set matching `API_USER`
+and `API_PASSWORD` values in `.env.local`. Then run:
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000. The Next.js server makes all API requests; credentials
+are not sent to the browser. `npm run build` creates the production build and
+`npm start` serves it. The API also supports match results and live forecast insights.
+Walk-forward backtest forecasts, corner probabilities, and scoreline probabilities
+are not persisted by the current model pipeline, so those views report them as
+unavailable rather than estimating or inventing them.
+
 ## Deploy on Streamlit Community Cloud
 
 The Streamlit entry point is `pitchprob_app/streamlit_app.py`. It renders the same
@@ -50,6 +81,8 @@ The GitHub Actions workflow at `.github/workflows/daily-model-refresh.yml` refre
 results and fixtures, retrains the available league models, updates forecasts, grades
 completed predictions, and commits the updated database and model artifacts to
 `pitch`. Streamlit Community Cloud then redeploys from that commit.
+The fixture sync also refreshes crest URLs for all teams in each competition, so
+existing local databases can be backfilled by running `python cli.py sync-fixtures`.
 
 Before enabling the workflow:
 
@@ -101,6 +134,7 @@ Edit `LEAGUES` in `config.py`. Each entry maps a short code to:
 - `name` — display name
 - `fd_code` — football-data.org competition code
 - `pb_name` — football-data.co.uk / penaltyblog competition name
+- `emblem_url` — the competition logo shown in the dashboard
 
 ## Database
 
