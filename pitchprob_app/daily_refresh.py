@@ -1,10 +1,11 @@
 """Refresh results, fixtures, forecasts, and model artifacts for deployment."""
+import traceback
 from config import FOOTBALL_DATA_TOKEN, LEAGUES, seasons_to_load
-from db import connect
+from db import connect, init_db
 from load_history import load_history
 from modeling import MODELS_DIR, train_all
 from predict import grade_predictions, make_predictions
-from sync_fixtures import sync_fixtures
+from sync_fixtures import load_international_results, sync_fixtures
 
 
 def main() -> None:
@@ -13,21 +14,34 @@ def main() -> None:
             "FOOTBALL_DATA_TOKEN is missing. Add it as a GitHub Actions repository secret."
         )
 
+    # Ensure schema migrations are up to date
+    init_db()
+
     seasons = seasons_to_load()
-    print("1/5 Refreshing historical results")
+
+    print("1/6 Refreshing international results")
+    try:
+        load_international_results()
+    except Exception as err:
+        print(f"  Warning: could not refresh international results ({err})")
+
+    print("2/6 Refreshing historical results")
     load_history(seasons[-2:], strict=True)
-    print("2/5 Refreshing upcoming fixtures")
+
+    print("3/6 Refreshing upcoming fixtures")
     sync_fixtures(strict=True)
-    print("3/5 Training league models")
+
+    print("4/6 Training league models")
     train_all()
 
     missing_models = [code for code in LEAGUES if not (MODELS_DIR / f"{code}.pkl").is_file()]
     if missing_models:
         raise RuntimeError(f"Model artifacts are missing for: {', '.join(missing_models)}")
 
-    print("4/5 Writing forecasts")
+    print("5/6 Writing forecasts")
     make_predictions()
-    print("5/5 Grading completed predictions")
+
+    print("6/6 Grading completed predictions")
     grade_predictions()
 
     with connect() as conn:
@@ -36,7 +50,7 @@ def main() -> None:
         predictions = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
         grades = conn.execute("SELECT COUNT(*) FROM grades").fetchone()[0]
     print(
-        f"Refresh complete: {matches} results, {fixtures} fixtures, "
+        f"\nRefresh complete: {matches} results, {fixtures} fixtures, "
         f"{predictions} forecasts, {grades} graded matches."
     )
 

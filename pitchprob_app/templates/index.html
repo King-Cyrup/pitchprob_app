@@ -339,6 +339,23 @@
     .stat-lbl {
       font-size: .72rem; color: var(--muted); margin-top: .25rem;
     }
+    .insight-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px; margin: 1rem 0 1.5rem;
+    }
+    .insight-card {
+      padding: .9rem 1rem; border: 1px solid var(--border); background: var(--surface);
+    }
+    .insight-card .label {
+      display: block; color: var(--muted); font-size: .68rem; letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .insight-card strong {
+      display: block; margin-top: .28rem; font-size: 1.05rem; font-weight: 700; color: var(--ink);
+    }
+    .insight-card small {
+      display: block; margin-top: .1rem; color: var(--muted); font-size: .72rem;
+    }
 
     /* Disclaimer */
     .discl {
@@ -754,15 +771,15 @@
         <header>
           <div class="mark"><span class="mark-dot" aria-hidden="true"></span>Match probability insights</div>
           <h1>PitchProb</h1>
-          <!-- <p class="tagline">
+          <p class="tagline">
             A statistical model trained on years of match results.
             See the probabilities for every fixture, and how the forecasts hold up over time.
-          </p> -->
-          <!-- <div class="time-zone">
+          </p>
+          <div class="time-zone">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             Times in UTC
             <span class="chevron" aria-hidden="true"></span>
-          </div> -->
+          </div>
         </header>
 
         <!-- Upcoming matches -->
@@ -819,15 +836,13 @@
                               <span class="team-initials" {% if f.home_crest %}hidden{% endif %}>{{ f.home_badge }}</span>
                             </span>
                             <span class="team-copy">
-                              {% if f.p_home is not none %}
                               <span class="team-heading">
                                 <span class="team-name">{{ f.home or f.home_fd }}</span>
+                                {% if f.p_home is not none %}
                                 <span class="team-probability" aria-label="Home win probability"><strong>{{ "%.0f"|format(f.p_home * 100) }}%</strong></span>
+                                <progress class="prob-track" value="{{ "%.1f"|format(f.p_home * 100) }}" max="100" aria-label="{{ f.home or f.home_fd }} win probability">{{ "%.0f"|format(f.p_home * 100) }}%</progress>
+                                {% endif %}
                               </span>
-                              <progress class="prob-track" value="{{ "%.1f"|format(f.p_home * 100) }}" max="100" aria-label="{{ f.home or f.home_fd }} win probability">{{ "%.0f"|format(f.p_home * 100) }}%</progress>
-                              {% else %}
-                              <span class="team-heading"><span class="team-name">{{ f.home or f.home_fd }}</span></span>
-                              {% endif %}
                             </span>
                           </span>
                           {% if f.p_home is not none %}
@@ -837,7 +852,10 @@
                             <span class="draw-track" aria-hidden="true"><span style="width: {{ "%.1f"|format(f.p_draw * 100) }}%"></span></span>
                           </span>
                           {% else %}
-                          <span class="match-center"><span class="versus">VS</span></span>
+                          <span class="match-center">
+                            <span class="versus">VS</span>
+                            <span class="forecast-pending">No forecast yet</span>
+                          </span>
                           {% endif %}
                           <span class="team-side away">
                             <span class="team-crest" aria-hidden="true">
@@ -845,18 +863,15 @@
                               <span class="team-initials" {% if f.away_crest %}hidden{% endif %}>{{ f.away_badge }}</span>
                             </span>
                             <span class="team-copy">
-                              {% if f.p_away is not none %}
                               <span class="team-heading">
                                 <span class="team-name">{{ f.away or f.away_fd }}</span>
+                                {% if f.p_away is not none %}
                                 <span class="team-probability" aria-label="Away win probability"><strong>{{ "%.0f"|format(f.p_away * 100) }}%</strong></span>
+                                <progress class="prob-track" value="{{ "%.1f"|format(f.p_away * 100) }}" max="100" aria-label="{{ f.away or f.away_fd }} win probability">{{ "%.0f"|format(f.p_away * 100) }}%</progress>
+                                {% endif %}
                               </span>
-                              <progress class="prob-track" value="{{ "%.1f"|format(f.p_away * 100) }}" max="100" aria-label="{{ f.away or f.away_fd }} win probability">{{ "%.0f"|format(f.p_away * 100) }}%</progress>
-                              {% else %}
-                              <span class="team-heading"><span class="team-name">{{ f.away or f.away_fd }}</span></span>
-                              {% endif %}
                             </span>
                           </span>
-                          {% if f.p_home is none %}<span class="forecast-pending">{{ f.note }}</span>{% endif %}
                         </span>
                         <span class="chevron match-chevron" aria-hidden="true"></span>
                       </button>
@@ -967,6 +982,42 @@
           </div>
           {% endif %}
         </div>
+
+        {% if ledger.league_accuracy %}
+        <div class="insight-grid">
+          {% for item in ledger.league_accuracy %}
+          <div class="insight-card">
+            <span class="label">{{ item.league_name }}</span>
+            <strong>{{ "%.0f"|format(item.pick_rate * 100) }}%</strong>
+            <small>{{ item.n }} graded matches</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if ledger.matchdays %}
+        <div class="insight-grid">
+          {% for day in ledger.matchdays %}
+          <div class="insight-card">
+            <span class="label">Matchday {{ day.matchday }}</span>
+            <strong>{{ day.hits }}/{{ day.n }}</strong>
+            <small>{{ "%.0f"|format(day.accuracy * 100) }}% correct</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if ledger.home_advantages %}
+        <div class="insight-grid">
+          {% for item in ledger.home_advantages %}
+          <div class="insight-card">
+            <span class="label">{{ item.league_name }} home edge</span>
+            <strong>{{ "%.3f"|format(item.home_advantage) }}</strong>
+            <small>Dixon-Coles home advantage</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Recent matches -->
         <div class="pnl">

@@ -4,6 +4,8 @@ import { getMatch } from "@/lib/api";
 import { notFound } from "next/navigation";
 import styles from "@/components/ui.module.css";
 
+type SearchParams = Promise<{ tab?: string }>;
+
 export default async function MatchPage({
   params,
   searchParams,
@@ -20,7 +22,6 @@ export default async function MatchPage({
   return (
     <div className={styles.pageGrid}>
       <AppHeader />
-      <h1 className={styles.pageTitle}>Match details</h1>
       <MatchDetailsTabs match={match} activeTab={activeTab} />
       <footer className={styles.footer}>Times in UTC · Forecasts are statistical estimates, not betting advice. 18+ only.</footer>
     </div>

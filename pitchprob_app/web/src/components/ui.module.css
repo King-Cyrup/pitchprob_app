@@ -73,6 +73,9 @@
 .dateChipSelected { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
 .dateLabel { font-size: 13px; white-space: nowrap; }
 .dateValue { font-size: 11px; font-variant-numeric: tabular-nums; }
+.dateChipEmpty { opacity: .55; }
+.dateDot { width: 5px; height: 5px; margin: 2px auto 0; border-radius: 50%; background: var(--accent); }
+.dateChipSelected .dateDot { background: var(--accent); }
 .stripArrow {
   display: grid;
   flex: 0 0 44px;
@@ -112,6 +115,10 @@
 }
 .leagueChip:hover { color: var(--ink); border-color: var(--muted); }
 .leagueChipSelected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+.leagueChipEmpty { opacity: .6; }
+.leagueChipName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pageTitleRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; max-width: 1200px; margin: 0 auto 16px; }
+.matchRowSelected { background: color-mix(in srgb, var(--accent-soft) 60%, transparent); }
 .leagueEmblem { width: 19px; height: 19px; object-fit: contain; }
 .chipCount { font-variant-numeric: tabular-nums; }
 
@@ -155,6 +162,7 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 .rowButton:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
@@ -345,6 +353,99 @@
 .skeletonRow { height: 80px; }
 @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
 
+/* ---- match details: tabs, markets, validation ---- */
+.outcomeBar { display: grid; gap: 7px; margin: 16px 0 0; }
+.outcomeBarTrack { display: flex; width: 100%; height: 12px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+.outcomeSegment { display: block; min-width: 0; height: 100%; background: #858f9e; }
+.outcomeSegment + .outcomeSegment { border-left: 1px solid var(--bg); }
+.outcomeSegmentPick { background: var(--accent); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--ink) 45%, transparent); }
+.outcomeLabels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.outcomeLabels > span { display: grid; gap: 1px; min-width: 0; }
+.outcomeLabelName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outcomeLabels strong { color: var(--ink); font-weight: 600; }
+.outcomeLabels .outcomeLabelPick { color: var(--accent); font-weight: 700; }
+.outcomeLabels .outcomeLabelPick strong { color: var(--accent); }
+
+.keyFigures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin-top: 16px; border: 1px solid var(--line); background: var(--line); }
+.keyFigure { display: grid; align-content: start; gap: 4px; min-height: 108px; padding: 12px; background: var(--surface); }
+.keyFigureValue { color: var(--ink); font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.keyFigureNote { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+.validationBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+.validationBadge svg { width: 12px; height: 12px; flex: 0 0 auto; }
+.validationValidated { border-color: color-mix(in srgb, var(--hit) 45%, var(--line)); color: var(--hit); }
+.validationExperimental { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); color: var(--warn); }
+.validationUnavailable { color: var(--muted); }
+
+.subsectionTitle { margin: 22px 0 10px; font-size: 14px; font-weight: 650; }
+.expectedGoals, .cornerExpected { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 16px 0; }
+.expectedSide { display: grid; gap: 3px; text-align: center; }
+.expectedValue { color: var(--ink); font-size: 30px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.expectedTotal { padding: 4px 12px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.ladder { display: grid; gap: 4px; }
+.ladderRow { display: grid; grid-template-columns: 76px minmax(60px, 1fr) 46px 68px; align-items: center; gap: 10px; min-height: 34px; padding: 3px 8px; border-radius: 8px; font-size: 12px; }
+.ladderRowHighlight { background: var(--surface-2); }
+.ladderLabel { color: var(--muted); white-space: nowrap; }
+.ladderValue { font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }
+.ladderUnder { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.thinBar { display: block; height: 7px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+.thinBar > span { display: block; height: 100%; border-radius: inherit; background: #858f9e; }
+.thinBarHighlight > span { background: var(--accent); }
+
+.scoreList { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; counter-reset: score; }
+.scoreRow { display: grid; grid-template-columns: 62px minmax(60px, 1fr) 46px; align-items: center; gap: 10px; min-height: 32px; font-size: 13px; }
+.scoreName { font-variant-numeric: tabular-nums; font-weight: 650; }
+.scoreValue { font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }
+
+.scoreGrid { width: 100%; margin-top: 10px; border-collapse: separate; border-spacing: 2px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.scoreGrid caption { padding-bottom: 8px; color: var(--muted); font-size: 11px; text-align: left; }
+.scoreGrid th { padding: 2px; color: var(--muted); font-weight: 600; text-align: center; }
+.scoreGrid thead th { font-size: 10px; }
+.scoreGrid td { position: relative; height: 26px; padding: 0; border-radius: 4px; color: var(--ink); text-align: center; }
+.scoreCellValue { position: relative; z-index: 1; }
+.scoreCellTop { outline: 2px solid var(--ink); outline-offset: -2px; }
+.scoreCellTopMark { position: absolute; top: 2px; right: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--ink); }
+.gridNote { margin-top: 8px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.badgeRow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+.chipRow { display: flex; flex-wrap: wrap; gap: 7px; }
+.cornerChip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+.cornerChip strong { font-variant-numeric: tabular-nums; }
+.cornerSideCard { padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.cornerSideTitle { margin-bottom: 9px; font-size: 13px; font-weight: 650; }
+.cornerTeamRow { display: grid; grid-template-columns: 62px minmax(40px, 1fr) 42px; align-items: center; gap: 9px; min-height: 28px; color: var(--muted); font-size: 12px; }
+.cornerTeamRow strong { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+
+.cornerCard { margin-top: 16px; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.cornerCardDistinct { border-left: 3px solid var(--accent); background: var(--surface-2); }
+.cornerCardTitle { margin-bottom: 11px; font-size: 13px; font-weight: 650; }
+.cornerCardTable { display: grid; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+.cornerCardRow { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); gap: 8px; padding: 8px 10px; background: var(--surface); font-size: 11px; }
+.cornerCardRow:first-child { background: var(--surface-2); color: var(--muted); font-weight: 650; }
+.cornerCardRow span:not(:first-child) { font-variant-numeric: tabular-nums; text-align: right; }
+.h2hMeetingList { display: grid; gap: 6px; margin-bottom: 12px; }
+.h2hMeeting { display: grid; grid-template-columns: 96px minmax(0, 1fr) 56px; align-items: center; gap: 10px; min-height: 32px; padding: 5px 9px; border-radius: 8px; background: var(--surface); font-size: 11px; }
+.h2hMeeting time { color: var(--muted); }
+.h2hMeetingTeams { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h2hMeetingCorners { font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }
+.calmEmpty { padding: 26px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.flagRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+
 @media (max-width: 1023px) {
   .matchLayout { grid-template-columns: minmax(0, 1fr); }
   .detailPane { display: none; }
@@ -379,4 +480,15 @@
   .resultScore { grid-column: 1; grid-row: 2; justify-self: start; font-size: 13px; }
   .insightsGrid { grid-template-columns: minmax(0, 1fr); }
   .insightsGrid > :last-child { grid-column: auto; }
+  .keyFigures { grid-template-columns: minmax(0, 1fr); }
+  .expectedValue { font-size: 26px; }
+  .ladderRow { grid-template-columns: 62px minmax(40px, 1fr) 42px; grid-template-areas: "label bar value" ". under under"; row-gap: 2px; }
+  .ladderLabel { grid-area: label; }
+  .ladderRow .thinBar { grid-area: bar; }
+  .ladderValue { grid-area: value; }
+  .ladderUnder { grid-area: under; text-align: left; }
+  .cornerCardRow { grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, 1fr)); font-size: 10px; }
+  .h2hMeeting { grid-template-columns: 78px minmax(0, 1fr) 48px; font-size: 10px; }
+  .scoreGrid { font-size: 9px; }
+  .scoreGrid td { height: 22px; }
 }

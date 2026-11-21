@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Match } from "@/lib/types";
@@ -23,21 +25,29 @@ export default function DateStrip({
   leagues,
   selectedLeague,
   today,
+  datesWithMatches,
 }: {
   date: string;
   matches: Match[];
   leagues: Array<{ code: string; name: string; emblem_url: string | null }>;
   selectedLeague: string;
   today: string;
+  /** Dates known to have fixtures, used to mark the strip. */
+  datesWithMatches?: string[];
 }) {
   const leagueCounts = new Map<string, number>();
   for (const match of matches) leagueCounts.set(match.league, (leagueCounts.get(match.league) || 0) + 1);
+  const hasMatches = new Set(datesWithMatches ?? []);
   const dateHref = (nextDate: string) => {
     const query = new URLSearchParams({ date: nextDate });
     if (selectedLeague !== "all") query.set("league", selectedLeague);
     return `/?${query.toString()}`;
   };
   const allLeagues = [{ code: "all", name: "All", emblem_url: null }, ...leagues];
+
+  // The strip starts on Today (or the selected date if it is in the past).
+  const stripStart = date < today ? date : today;
+  const stripDays = Array.from({ length: 7 }, (_, index) => addDays(stripStart, index));
 
   return (
     <div className={styles.controlStack}>
@@ -46,17 +56,18 @@ export default function DateStrip({
           <ChevronLeft aria-hidden="true" />
         </Link>
         <div className={styles.dateScroller}>
-          {Array.from({ length: 7 }, (_, index) => {
-            const day = addDays(date, index);
+          {stripDays.map((day) => {
+            const has = hasMatches.size ? hasMatches.has(day) : false;
             return (
               <Link key={day} href={dateHref(day)}
-                className={`${styles.dateChip} ${day === date ? styles.dateChipSelected : ""}`}
+                className={`${styles.dateChip} ${day === date ? styles.dateChipSelected : ""} ${hasMatches.size && !has ? styles.dateChipEmpty : ""}`}
                 aria-current={day === date ? "date" : undefined}>
                 <span className={styles.dateLabel}>{labelFor(day, today)}</span>
                 <span className={styles.dateValue}>
                   {new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" })
                     .format(new Date(`${day}T00:00:00Z`))}
                 </span>
+                {has && <span className={styles.dateDot} aria-label="fixtures on this day" />}
               </Link>
             );
           })}
@@ -72,10 +83,10 @@ export default function DateStrip({
           if (league.code !== "all") query.set("league", league.code);
           return (
             <Link key={league.code} href={`/?${query.toString()}`}
-              className={`${styles.leagueChip} ${selectedLeague === league.code ? styles.leagueChipSelected : ""}`}
+              className={`${styles.leagueChip} ${selectedLeague === league.code ? styles.leagueChipSelected : ""} ${count === 0 ? styles.leagueChipEmpty : ""}`}
               aria-current={selectedLeague === league.code ? "true" : undefined}>
               {league.emblem_url && <img className={styles.leagueEmblem} src={league.emblem_url} alt="" />}
-              <span>{league.name}</span>
+              <span className={styles.leagueChipName}>{league.name}</span>
               <span className={styles.chipCount}>{count}</span>
             </Link>
           );

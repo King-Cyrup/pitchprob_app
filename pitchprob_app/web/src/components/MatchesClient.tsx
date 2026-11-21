@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Match } from "@/lib/types";
+import type { Match, MatchDetails } from "@/lib/types";
 import DateStrip from "@/components/DateStrip";
-import { MatchDetailPanel } from "@/components/MatchDetailPanel";
+import MatchDetailsTabs from "@/components/MatchDetailsTabs";
 import MatchGroup from "@/components/MatchGroup";
 import styles from "./ui.module.css";
 
@@ -17,6 +18,11 @@ export default function MatchesClient({
   leagues,
   selectedLeague,
   initialSelectedMatch,
+  initialDetails,
+  nextMatchDate,
+  nextMatchLabel,
+  datesWithMatches,
+  activeTab,
 }: {
   date: string;
   today: string;
@@ -24,13 +30,62 @@ export default function MatchesClient({
   leagues: League[];
   selectedLeague: string;
   initialSelectedMatch: Match | null;
+  initialDetails: MatchDetails | null;
+  nextMatchDate: string | null;
+  nextMatchLabel: string | null;
+  datesWithMatches: string[];
+  activeTab: string;
 }) {
-  const [selectedMatch, setSelectedMatch] = useState(initialSelectedMatch);
+  const router = useRouter();
+  const [selectedId, setSelectedId] = useState<number | null>(initialSelectedMatch?.id ?? null);
+  const [details, setDetails] = useState<MatchDetails | null>(initialDetails);
+  const [detailsError, setDetailsError] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Keep the pane in sync when the URL changes (server re-render with ?selected=).
   useEffect(() => {
-    setSelectedMatch(initialSelectedMatch);
-  }, [initialSelectedMatch]);
-  const counts = new Map<string, number>();
-  for (const match of matches) counts.set(match.league, (counts.get(match.league) || 0) + 1);
+    setSelectedId(initialSelectedMatch?.id ?? null);
+    setDetails(initialDetails);
+    setDetailsError(false);
+  }, [initialSelectedMatch, initialDetails]);
+
+  // Fetch full details when the user picks a fixture before the server round-trip finishes.
+  useEffect(() => {
+    if (selectedId === null) {
+      setDetails(null);
+      setDetailsError(false);
+      return;
+    }
+    if (initialDetails && initialDetails.id === selectedId) {
+      setDetails(initialDetails);
+      setDetailsError(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetails(true);
+    setDetailsError(false);
+    fetch(`/api/matches/${selectedId}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(String(response.status));
+        return response.json() as Promise<MatchDetails>;
+      })
+      .then((payload) => {
+        if (!cancelled) setDetails(payload);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDetails(null);
+          setDetailsError(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetails(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, initialDetails]);
+
   const visibleMatches = selectedLeague === "all" ? matches : matches.filter((match) => match.league === selectedLeague);
   const groups = leagues
     .filter((league) => visibleMatches.some((match) => match.league === league.code))
@@ -45,10 +100,18 @@ export default function MatchesClient({
     ? `Updated ${staleMinutes < 60 ? `${staleMinutes} min` : `${Math.floor(staleMinutes / 60)} hr`} ago`
     : null;
 
+  function selectMatch(match: Match) {
+    setSelectedId(match.id);
+  }
+
   return (
     <>
-      <h1 className={styles.pageTitle}>Matches</h1>
-      <DateStrip date={date} matches={matches} leagues={leagues} selectedLeague={selectedLeague} today={today} />
+      <div className={styles.pageTitleRow}>
+        <h1 className={styles.pageTitle}>Matches</h1>
+        <span className={styles.subtleTitle}>Times in UTC</span>
+      </div>
+      <DateStrip date={date} matches={matches} leagues={leagues} selectedLeague={selectedLeague} today={today}
+        datesWithMatches={datesWithMatches} />
       <div className={styles.matchLayout}>
         <section className={styles.matchListPane} aria-label="Match list">
           <div className={styles.listHeading}>
@@ -57,20 +120,48 @@ export default function MatchesClient({
           </div>
           {groups.length ? groups.map((group) => (
             <MatchGroup key={group.code} code={group.code} name={group.name}
-              emblemUrl={group.emblem_url} matches={group.matches} date={date} onSelect={setSelectedMatch} />
+              emblemUrl={group.emblem_url} matches={group.matches} date={date}
+              selectedId={selectedId}
+              onSelect={selectMatch} />
           )) : (
             <div className={styles.empty}>
               <strong>No matches on this day.</strong>
-              <span>Try tomorrow to see the next fixtures.</span>
-              <Link className={styles.textLink} href={`/?date=${addOneDay(date)}`}>Show tomorrow’s matches</Link>
+              {nextMatchDate ? (
+                <>
+                  <span>The next fixtures are on {nextMatchLabel}.</span>
+                  <Link className={styles.textLink} href={`/?date=${nextMatchDate}`}>Go to {nextMatchLabel}</Link>
+                </>
+              ) : (
+                <span>There are no fixtures in the next 14 days.</span>
+              )}
             </div>
           )}
         </section>
         <aside className={styles.detailPane} aria-label="Selected match">
-          {selectedMatch ? <MatchDetailPanel match={selectedMatch} compact /> : (
+          {detailsError ? (
+            <div className={styles.errorBox} role="alert">
+              <p className={styles.sectionTitle}>Could not load this match</p>
+              <p className={styles.muted}>The match details service did not answer. Try again.</p>
+              <button className={styles.retryButton} type="button" onClick={() => {
+                setDetailsError(false);
+                setSelectedId(null);
+                router.refresh();
+              }}>Retry</button>
+            </div>
+          ) : loadingDetails && !details ? (
+            <div className={styles.detailPlaceholder} aria-busy="true">
+              <div className={styles.skeletonHeader} />
+              <div className={styles.skeletonDate} />
+              <div className={styles.skeletonRow} />
+            </div>
+          ) : details ? (
+            <MatchDetailsTabs match={details} activeTab={activeTab} showBackLink={false}
+              linkBase={`/?date=${date}&selected=${details.id}`} />
+          ) : (
             <div className={styles.detailPlaceholder}>
               <p className={styles.placeholderTitle}>Match details</p>
               <p className={styles.muted}>Select a fixture to see its match details here.</p>
+              {nextMatchLabel && <p className={styles.muted}>Next kickoff: {nextMatchLabel}.</p>}
             </div>
           )}
         </aside>
@@ -80,10 +171,4 @@ export default function MatchesClient({
       </footer>
     </>
   );
-}
-
-function addOneDay(date: string) {
-  const next = new Date(`${date}T00:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + 1);
-  return next.toISOString().slice(0, 10);
 }

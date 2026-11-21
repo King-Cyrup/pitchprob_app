@@ -28,26 +28,36 @@ _load_dotenv()
 # fd_code = football-data.org competition code, pb_name = penaltyblog / football-data.co.uk name
 LEAGUES = {
     "PL": {"name": "Premier League", "fd_code": "PL", "pb_name": "ENG Premier League",
-           "emblem_url": "https://crests.football-data.org/PL.png"},
+           "emblem_url": "https://crests.football-data.org/PL.png", "kind": "club"},
     "PD": {"name": "La Liga", "fd_code": "PD", "pb_name": "ESP La Liga",
-           "emblem_url": "https://crests.football-data.org/PD.png"},
+           "emblem_url": "https://crests.football-data.org/PD.png", "kind": "club"},
     "SA": {"name": "Serie A", "fd_code": "SA", "pb_name": "ITA Serie A",
-           "emblem_url": "https://crests.football-data.org/SA.png"},
+           "emblem_url": "https://crests.football-data.org/SA.png", "kind": "club"},
     "BL1": {"name": "Bundesliga", "fd_code": "BL1", "pb_name": "DEU Bundesliga 1",
-            "emblem_url": "https://crests.football-data.org/BL1.png"},
+            "emblem_url": "https://crests.football-data.org/BL1.png", "kind": "club"},
     "FL1": {"name": "Ligue 1", "fd_code": "FL1", "pb_name": "FRA Ligue 1",
-            "emblem_url": "https://crests.football-data.org/FL1.png"},
+            "emblem_url": "https://crests.football-data.org/FL1.png", "kind": "club"},
     "CL": {"name": "Champions League", "fd_code": "CL", "pb_name": None,
-           "emblem_url": "https://crests.football-data.org/CL.png"},
+           "emblem_url": "https://crests.football-data.org/CL.png", "kind": "club"},
+    "UNL": {"name": "UEFA Nations League", "fd_code": "UNL", "pb_name": None,
+            "emblem_url": None, "kind": "national"},
 }
 
 FOOTBALL_DATA_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN", "")
 FD_BASE_URL = "https://api.football-data.org/v4"
 
-XI = 0.001            # time-decay rate used in penaltyblog's own Dixon-Coles example
+XI = 0.0019           # time-decay rate in Dixon-Coles weighting; emphasises recent results
+TRAIN_WINDOW_DAYS = 1095
 SEASONS_BACK = 3      # how many completed seasons to train on (plus the current one)
 FIXTURE_DAYS_AHEAD = 7
 LOCK_MINUTES = 60     # forecasts are frozen this many minutes before kickoff (tamper-proof)
+
+# ── Step feature flags ─────────────────────────────────────────────────────────
+# All start False. Set to True only after `python cli.py compare` says "adopt".
+USE_ELO_BLEND = False        # Step 2: blend Dixon-Coles with Elo ratings (club leagues only)
+USE_PLATT = False            # Step 3: Platt recalibration for Over/Under and BTTS
+USE_NB_CORNERS = False       # Step 5: negative-binomial corner model instead of Poisson
+ELO_BLEND_WEIGHT = 0.5      # Step 2: weight for Elo in the blend (0.35 and 0.5 tested; both adopted)
 
 
 def season_label(d: date) -> str:

@@ -67,6 +67,35 @@ def calibration(rows: list[dict], width: float = 0.1) -> list[dict]:
     ]
 
 
+def calibration_by_spread(rows: list[dict], width: float = 0.05) -> list[dict]:
+    """Bucket each forecast by the gap between the top pick and the runner-up probability."""
+    bins: dict[int, list] = {}
+    max_bin = int(round(1 / width))
+    for r in rows:
+        probs = [r["p_home"], r["p_draw"], r["p_away"]]
+        top = max(probs)
+        second = sorted(probs)[-2]
+        gap = max(top - second, 0.0)
+        if gap >= 1.0:
+            gap = 0.999999
+        b = min(int(gap / width), max_bin - 1)
+        slot = bins.setdefault(b, [0, 0])
+        slot[0] += 1
+        slot[1] += 1 if r["pick_hit"] else 0
+    out = []
+    for b, (n, hits) in sorted(bins.items()):
+        low = b * width
+        high = min((b + 1) * width, 1.0)
+        out.append({
+            "from": low,
+            "to": high,
+            "range": f"{low * 100:.0f}-{high * 100:.0f}%",
+            "n": n,
+            "hit_rate": hits / n,
+        })
+    return out
+
+
 def print_report(league: str | None = None, last: int = 20) -> None:
     with connect() as conn:
         rows = fetch_results(conn, league)
@@ -91,6 +120,12 @@ def print_report(league: str | None = None, last: int = 20) -> None:
     print(f"  {'band':8} {'forecasts':>9} {'average forecast':>17} {'happened':>9}")
     for b in calibration(rows):
         print(f"  {b['range']:8} {b['n']:9d} {b['avg_forecast']:17.0%} {b['actual']:9.0%}")
+    spread = calibration_by_spread(rows)
+    if spread:
+        print("\n  Spread calibration: how often was the top pick right when it led by X points?")
+        print(f"  {'band':8} {'matches':>8} {'top pick correct':>18}")
+        for b in spread:
+            print(f"  {b['range']:8} {b['n']:8d} {b['hit_rate']:18.0%}")
     if s["n"] < 100:
         print(f"\n  NOTE: only {s['n']} graded matches. Fewer than 100 is too few to judge the model: "
               "differences are mostly luck.")

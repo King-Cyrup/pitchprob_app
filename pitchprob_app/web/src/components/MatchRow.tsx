@@ -16,7 +16,17 @@ function flagText(flag: Match["flags"][number]) {
   return `${flag.type.replaceAll("_", " ")} in ${flag.days} days`;
 }
 
-export default function MatchRow({ match, date, onSelect }: { match: Match; date: string; onSelect: (match: Match) => void }) {
+export default function MatchRow({
+  match,
+  date,
+  onSelect,
+  selected = false,
+}: {
+  match: Match;
+  date: string;
+  onSelect: (match: Match) => void;
+  selected?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
   const kickoff = new Date(match.kickoff_utc);
@@ -24,22 +34,29 @@ export default function MatchRow({ match, date, onSelect }: { match: Match; date
     hour: "2-digit", minute: "2-digit", timeZone: "UTC", hourCycle: "h23",
   }).format(kickoff);
   const displayTime = match.result ? `${match.result.home_goals}–${match.result.away_goals}` : time;
+  const detailHref = `/?date=${date}&selected=${match.id}`;
 
   return (
-    <article className={styles.matchRow}>
-      <button className={styles.rowButton} type="button" aria-expanded={expanded}
+    <article className={`${styles.matchRow} ${selected ? styles.matchRowSelected : ""}`}>
+      <Link
+        className={styles.rowButton}
+        href={detailHref}
+        scroll={false}
+        aria-expanded={expanded}
+        aria-current={selected ? "true" : undefined}
         aria-label={`${match.home} versus ${match.away}${expanded ? ", collapse details" : ", show match details"}`}
-        onClick={() => {
-          if (window.matchMedia("(max-width: 1023px)").matches) router.push(`/match/${match.id}`);
-          else {
-            setExpanded(!expanded);
-            onSelect(match);
-            const params = new URLSearchParams(window.location.search);
-            params.set("date", date);
-            params.set("selected", String(match.id));
-            window.history.pushState(null, "", `/?${params.toString()}`);
+        onClick={(event) => {
+          if (window.matchMedia("(max-width: 1023px)").matches) {
+            event.preventDefault();
+            router.push(`/match/${match.id}`);
+            return;
           }
-        }}>
+          // Desktop: keep the pane snappy, then let the Link update the URL so
+          // a refresh or shareable link still opens the same details.
+          setExpanded(true);
+          onSelect(match);
+        }}
+      >
         <span className={styles.rowTime}>
           <strong>{displayTime}</strong>
           <span>{match.result ? "Full time" : new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(kickoff)}</span>
@@ -68,18 +85,18 @@ export default function MatchRow({ match, date, onSelect }: { match: Match; date
           )}
         </div>
         <span className={styles.rowExpand}><ChevronDown aria-hidden="true" /></span>
-      </button>
+      </Link>
       {expanded && (
         <div className={styles.expanded}>
           {match.forecast ? (
             <div className={styles.quickStats}>
-              <span>Expected goals <strong>{match.forecast.xg_home.toFixed(1)}–{match.forecast.xg_away.toFixed(1)}</strong></span>
+              <span>Expected goals <strong>{match.forecast.xg_home?.toFixed(1) ?? "—"}–{match.forecast.xg_away?.toFixed(1) ?? "—"}</strong></span>
               <span>Over 2.5 <strong>{Math.round(match.forecast.p_over25 * 100)}%</strong></span>
               <span>Both teams to score <strong>{Math.round(match.forecast.p_btts * 100)}%</strong></span>
             </div>
           ) : <p>{match.note || "Forecast not available for this match."}</p>}
           <div className={styles.expandedLinks}>
-            <Link className={`${styles.textLink} ${styles.selectPaneLink}`} href={`/?date=${date}&selected=${match.id}`}>Open in detail pane</Link>
+            <Link className={`${styles.textLink} ${styles.selectPaneLink}`} href={detailHref}>Open in detail pane</Link>
             <Link className={styles.textLink} href={`/match/${match.id}`}>Full match page</Link>
           </div>
         </div>

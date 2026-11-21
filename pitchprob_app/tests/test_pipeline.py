@@ -1,4 +1,5 @@
 """End-to-end test with invented data. Run with:  python -m pytest -q"""
+import json
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -7,7 +8,7 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import config, db, modeling, names, predict, evaluate, sync_fixtures, load_history  # noqa: E402
+import config, db, modeling, names, predict, evaluate, sync_fixtures, load_history, report  # noqa: E402
 
 TEAMS = ["Man City", "Man United", "Arsenal", "Chelsea", "Liverpool", "Tottenham", "Newcastle", "Wolves",
          "Brighton", "Everton", "Fulham", "Leeds", "Nott'm Forest", "West Ham", "Aston Villa", "Brentford",
@@ -44,7 +45,7 @@ def make_history(today: date, current_pairs: int = 150) -> pd.DataFrame:
 
 def store(df: pd.DataFrame):
     with db.connect() as conn:
-        conn.executemany("INSERT INTO matches VALUES ('PL', ?, ?, ?, ?, ?, ?)",
+        conn.executemany("INSERT INTO matches (league, season, match_date, home, away, home_goals, away_goals) VALUES ('PL', ?, ?, ?, ?, ?, ?)",
                          [(r.season, r.match_date, r.home, r.away, r.home_goals, r.away_goals) for r in df.itertuples()])
 
 
@@ -54,6 +55,21 @@ def test_metrics():
     assert modeling.rps_1x2((1.0, 0.0, 0.0), "H") == pytest.approx(0.0)
     assert modeling.rps_1x2((0.0, 0.0, 1.0), "H") == pytest.approx(1.0)  # worst case
     assert modeling.rps_1x2((1/3, 1/3, 1/3), "D") == pytest.approx(1/9)   # hand-calculated: 0.5*((1/3)^2+(1/3)^2)
+
+
+def test_home_advantage_and_spread_calibration():
+    class FakeModel:
+        _params = np.array([1.0, 0.9, 0.8, 0.5])
+
+    rows = [
+        {"p_home": 0.45, "p_draw": 0.35, "p_away": 0.20, "pick_hit": True, "outcome": "H"},
+        {"p_home": 0.46, "p_draw": 0.34, "p_away": 0.20, "pick_hit": False, "outcome": "D"},
+        {"p_home": 0.44, "p_draw": 0.33, "p_away": 0.23, "pick_hit": True, "outcome": "H"},
+    ]
+    assert modeling.home_advantage(model=FakeModel()) == pytest.approx(0.8)
+    bands = report.calibration_by_spread(rows)
+    assert sum(item["n"] for item in bands) == 3
+    assert sum(item["hit_rate"] * item["n"] for item in bands) / 3 == pytest.approx(2 / 3)
 
 
 def test_fixture_days_grouping():
@@ -116,6 +132,8 @@ def test_champions_league_fixture_renders_in_app(env, monkeypatch):
     assert response.status_code == 200
     assert "Champions League" in response.text
     assert "Real Madrid" in response.text and "Arsenal FC" in response.text
+    assert "A statistical model trained on years of match results." in response.text
+    assert "Times in UTC" in response.text
     assert 'src="https://crests.football-data.org/CL.png"' in response.text
     assert 'src="https://crests.football-data.org/86.svg"' in response.text
 
@@ -137,9 +155,14 @@ def test_nextjs_api_contracts(env, monkeypatch):
         conn.execute(
             """INSERT INTO predictions
                (fd_match_id, created_at, model_trained_at, p_home, p_draw, p_away,
-                p_over25, p_btts, xg_home, xg_away)
-               VALUES (7101, ?, ?, 0.48, 0.27, 0.25, 0.55, 0.52, 1.7, 1.1)""",
-            (kickoff, kickoff),
+                p_over25, p_btts, xg_home, xg_away, markets_json)
+               VALUES (7101, ?, ?, 0.48, 0.27, 0.25, 0.55, 0.52, 1.7, 1.1, ?)""",
+            (kickoff, kickoff, json.dumps({
+                "over": {"0.5": 1.0, "1.5": 1.0, "2.5": 0.55, "3.5": 0.05, "4.5": 0.0},
+                "btts": 0.52, "top_scores": [{"score": "1-1", "p": 0.118}],
+                "grid": [[0.1, 0.1], [0.1, 0.1]], "grid_other": 0.16,
+                "full_grid": [[0.1, 0.1], [0.1, 0.1]],
+            })),
         )
         conn.execute(
             """INSERT INTO grades VALUES
@@ -157,7 +180,20 @@ def test_nextjs_api_contracts(env, monkeypatch):
 
     details = client.get("/api/matches/7101")
     assert details.status_code == 200
-    assert details.json()["extras"]["goal_lines"] == {"2.5": 0.55}
+    d = details.json()
+    assert d["competition"]["code"] == "PL"
+    assert d["competition"]["name"] == "Premier League"
+    assert d["competition"]["stage"] is None
+    assert d["home"] == {"name": "Arsenal", "badge_url": None}
+    assert d["forecast"]["pick"] == "H"
+    assert d["goals"] == {"exp_home": 1.7, "exp_away": 1.1, "exp_total": 2.8,
+                          "over": {"0.5": 1.0, "1.5": 1.0, "2.5": 0.55, "3.5": 0.05, "4.5": 0.0},
+                          "btts": 0.52}
+    assert d["correct_score"]["grid_other"] == 0.16
+    assert d["result"] == {"home_goals": 2, "away_goals": 1, "outcome": "H"}
+    assert d["validation"]["1x2"] is None
+    corners = d["corners"]
+    assert corners["available"] is True or corners.get("available") is False
 
     days = client.get("/api/results/days")
     assert days.status_code == 200
@@ -193,7 +229,7 @@ def test_match_context_uses_recent_history(env):
     ]
     with db.connect() as conn:
         conn.executemany(
-            "INSERT INTO matches VALUES ('PL', ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO matches (league, season, match_date, home, away, home_goals, away_goals) VALUES ('PL', ?, ?, ?, ?, ?, ?)",
             [(f"2025-{index}", *match) for index, match in enumerate(history)],
         )
         fixtures = [
@@ -252,7 +288,10 @@ def test_full_pipeline(env, monkeypatch):
             assert 0 < p["p_over25"] < 1 and 0 < p["p_btts"] < 1
         # results arrive later
         for n, (h, a) in enumerate(todo, start=1):
-            conn.execute("INSERT INTO matches VALUES ('PL', ?, ?, ?, ?, 2, 1)", (config.season_label(today), today.isoformat(), h, a))
+            conn.execute(
+                "INSERT INTO matches (league, season, match_date, home, away, home_goals, away_goals) VALUES ('PL', ?, ?, ?, ?, 2, 1)",
+                (config.season_label(today), today.isoformat(), h, a),
+            )
     predict.grade_predictions()
     with db.connect() as conn:
         g = conn.execute("SELECT * FROM grades").fetchall()
@@ -377,11 +416,18 @@ def test_streamlit_dashboard_smoke():
     result = AppTest.from_file(str(script), default_timeout=30).run()
 
     assert not result.exception
-    page_html = result.html[0].proto.body
-    assert "<title>PitchProb" in page_html
-    assert "Track record" in page_html
-    assert "Champions League" in page_html
+    assert [item.value for item in result.title] == ["Matches"]
+    buttons = [item.label for item in result.button]
+    assert any(label.startswith("Today") for label in buttons)
+    assert any(label.startswith("All ") for label in buttons)
+    assert any(label.startswith("Premier League ") for label in buttons)
+    assert any(label.startswith("Champions League ") for label in buttons)
     assert not result.radio and not result.multiselect
+
+    tomorrow = next(item for item in result.button if item.label.startswith("Tomorrow"))
+    tomorrow.click().run()
+    assert result.session_state["match_date"] == datetime.now(timezone.utc).date() + timedelta(days=1)
+    assert not result.exception
 
 
 def test_check_access_and_status(env, monkeypatch, capsys):

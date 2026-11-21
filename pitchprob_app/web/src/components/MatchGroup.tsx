@@ -13,6 +13,7 @@ export default function MatchGroup({
   matches,
   date,
   onSelect,
+  selectedId,
 }: {
   code: string;
   name: string;
@@ -20,6 +21,7 @@ export default function MatchGroup({
   matches: Match[];
   date: string;
   onSelect: (match: Match) => void;
+  selectedId?: number | null;
 }) {
   const [open, setOpen] = useState(true);
   return (
@@ -31,7 +33,14 @@ export default function MatchGroup({
         <span className={styles.leagueCount}>{matches.length} {matches.length === 1 ? "match" : "matches"}</span>
         <ChevronDown aria-hidden="true" />
       </button>
-      {open && <div className={styles.rows}>{matches.map((match) => <MatchRow key={match.id} match={match} date={date} onSelect={onSelect} />)}</div>}
+      {open && (
+        <div className={styles.rows}>
+          {matches.map((match) => (
+            <MatchRow key={match.id} match={match} date={date} onSelect={onSelect}
+              selected={selectedId === match.id} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

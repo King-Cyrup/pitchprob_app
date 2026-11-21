@@ -1,6 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import type {
+  DateAvailability,
   InsightsResponse,
   MatchDetails,
   MatchesResponse,
@@ -49,6 +50,10 @@ export function getMatches(date: string): Promise<MatchesResponse> {
 
 export function getMatch(id: number): Promise<MatchDetails> {
   return get(`/api/matches/${id}`);
+}
+
+export function getDates(from: string, days = 14): Promise<DateAvailability[]> {
+  return get(`/api/dates?from=${encodeURIComponent(from)}&days=${days}`);
 }
 
 export function getResultsDays(): Promise<ResultsDaysResponse> {

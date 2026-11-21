@@ -1,0 +1,52 @@
+date_utc,time_utc,home,away,group,neutral
+2026-11-12,19:45,England,Croatia,League A,FALSE
+2026-11-12,19:45,France,Italy,League A,FALSE
+2026-11-12,19:45,Belgium,Israel,League A,FALSE
+2026-11-12,19:45,Greece,England,League B,FALSE
+2026-11-12,19:45,Republic of Ireland,Finland,League B,FALSE
+2026-11-12,19:45,Slovenia,Norway,League B,FALSE
+2026-11-12,19:45,North Macedonia,Latvia,League C,FALSE
+2026-11-12,19:45,Armenia,Faroe Islands,League C,FALSE
+2026-11-13,19:45,Scotland,Croatia,League A,FALSE
+2026-11-13,19:45,Poland,Portugal,League A,FALSE
+2026-11-13,19:45,Denmark,Spain,League A,FALSE
+2026-11-13,19:45,Switzerland,Serbia,League A,FALSE
+2026-11-13,19:45,Portugal,Poland,League A,FALSE
+2026-11-13,19:45,Northern Ireland,Belarus,League C,FALSE
+2026-11-13,19:45,Luxembourg,Bulgaria,League C,FALSE
+2026-11-13,19:45,San Marino,Gibraltar,League D,FALSE
+2026-11-14,14:00,Azerbaijan,Estonia,League C,FALSE
+2026-11-14,17:00,Georgia,Ukraine,League B,FALSE
+2026-11-14,17:00,Montenegro,Iceland,League B,FALSE
+2026-11-14,17:00,Turkey,Wales,League B,FALSE
+2026-11-14,17:00,Andorra,Moldova,League D,FALSE
+2026-11-14,19:45,Germany,Bosnia and Herzegovina,League A,FALSE
+2026-11-14,19:45,Netherlands,Hungary,League A,FALSE
+2026-11-14,19:45,Albania,Czech Republic,League B,FALSE
+2026-11-14,19:45,Sweden,Slovakia,League C,FALSE
+2026-11-15,14:00,Latvia,Armenia,League C,FALSE
+2026-11-15,14:00,North Macedonia,Faroe Islands,League C,FALSE
+2026-11-15,17:00,England,Republic of Ireland,League B,FALSE
+2026-11-15,17:00,Finland,Greece,League B,FALSE
+2026-11-15,17:00,Austria,Slovenia,League B,FALSE
+2026-11-15,17:00,Norway,Kazakhstan,League B,FALSE
+2026-11-15,19:45,Italy,France,League A,FALSE
+2026-11-15,19:45,Israel,Belgium,League A,TRUE
+2026-11-16,19:45,Croatia,Portugal,League A,FALSE
+2026-11-16,19:45,Poland,Scotland,League A,FALSE
+2026-11-16,19:45,Spain,Switzerland,League A,FALSE
+2026-11-16,19:45,Serbia,Denmark,League A,FALSE
+2026-11-16,19:45,Romania,Cyprus,League C,FALSE
+2026-11-16,19:45,Kosovo,Lithuania,League C,FALSE
+2026-11-16,19:45,Bulgaria,Belarus,League C,FALSE
+2026-11-16,19:45,Luxembourg,Northern Ireland,League C,FALSE
+2026-11-16,19:45,Liechtenstein,San Marino,League D,FALSE
+2026-11-17,19:45,Bosnia and Herzegovina,Netherlands,League A,FALSE
+2026-11-17,19:45,Hungary,Germany,League A,FALSE
+2026-11-17,19:45,Albania,Ukraine,League B,FALSE
+2026-11-17,19:45,Czech Republic,Georgia,League B,FALSE
+2026-11-17,19:45,Montenegro,Turkey,League B,FALSE
+2026-11-17,19:45,Wales,Iceland,League B,FALSE
+2026-11-17,19:45,Slovakia,Estonia,League C,FALSE
+2026-11-17,19:45,Sweden,Azerbaijan,League C,FALSE
+2026-11-17,19:45,Malta,Andorra,League D,FALSE
